@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---- Enums ----
+enum UserRole {
+  STUDENT
+  REPRESENTATIVE
+  ADMIN
+}
+
+enum ScheduleStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+// ---- Models ----
+model User {
+  id                Int      @id @default(autoincrement())
+  email             String   @unique
+  hashed_password   String
+  first_name        String
+  last_name         String
+  role              UserRole @default(STUDENT)
+  is_representative Boolean  @default(false)
+  strikes           Int      @default(0)
+
+  // 1:1 con SRScheduling (enforzado desde SRScheduling.userId @unique)
+  srScheduling SRScheduling?
+
+  // Relación con grupos (representante de 0..n grupos)
+  groupsRepresented Group[] @relation("GroupRepresentative")
+
+  // Moderación de grupos (many-to-many)
+  moderatedGroups Group[] @relation("GroupModerators")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Group {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  reputation  Int     @default(0)
+
+  // Representante (1 user)
+  representativeId Int
+  representative   User @relation("GroupRepresentative", fields: [representativeId], references: [id])
+
+  // Moderadores (many-to-many)
+  moderators User[] @relation("GroupModerators")
+
+  // Eventos del grupo
+  events EventsScheduling[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StudyRoom {
+  id       Int    @id @default(autoincrement())
+  name     String
+  capacity Int?
+
+  // Reservas de study rooms
+  schedules SRScheduling[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name]) // ajusta si hay nombres repetidos por edificio/piso
+}
+
+model PublicSpace {
+  id       Int    @id @default(autoincrement())
+  name     String
+  capacity Int?
+
+  // Agendamientos de eventos
+  schedules EventsScheduling[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name])
+}
+
+// ---------- Schedules ----------
+model SRScheduling {
+  id Int @id @default(autoincrement())
+
+  // 1:1 con User “por ahora”: userId @unique
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  srId      Int
+  studyRoom StudyRoom @relation(fields: [srId], references: [id])
+
+  // Reemplazo de day + start_time + end_time
+  startsAt DateTime
+  endsAt   DateTime
+  status   ScheduleStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Evita duplicar exactamente el mismo bloque en la misma sala
+  @@unique([srId, startsAt, endsAt])
+  @@index([srId, startsAt])
+  @@index([userId, startsAt])
+}
+
+model EventsScheduling {
+  id Int @id @default(autoincrement())
+
+  psId  Int
+  space PublicSpace @relation(fields: [psId], references: [id])
+
+  groupId Int
+  group   Group @relation(fields: [groupId], references: [id])
+
+  // Reemplazo de date/day/start_time/end_time
+  startsAt DateTime
+  endsAt   DateTime
+  status   ScheduleStatus @default(PENDING)
+  title    String?
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([psId, startsAt, endsAt])
+  @@index([psId, startsAt])
+  @@index([groupId, startsAt])
+}
