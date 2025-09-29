@@ -4,11 +4,11 @@ const cors = require('cors');
 
 // Routers
 
-const groupsRouter = require('./routes/groups');
-const eventsRouter = require('./routes/events');
-const publicSpacesRouter = require('./routes/publicSpaces');
-const eventRequestsRouter = require('./routes/eventRequests');
-const groupRequestsRouter = require('./routes/groupRequests');
+const groupsRouter = require('./routes/groups.routes');
+const eventsRouter = require('./routes/events.routes');
+const publicSpacesRouter = require('./routes/publicSpaces.routes');
+const eventRequestsRouter = require('./routes/eventRequests.routes');
+const groupRequestsRouter = require('./routes/groupRequests.routes');
 const usersRouter = require('./routes/user.routes');
 const roomsRouter = require('./routes/studyRooms.routes');
 const schedulesRouter = require('./routes/schedule.routes');
