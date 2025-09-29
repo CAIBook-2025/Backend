@@ -3,6 +3,12 @@ const morgan = require('morgan');
 const cors = require('cors');
 
 // Routers
+
+const groupsRouter = require('./routes/groups');
+const eventsRouter = require('./routes/events');
+const publicSpacesRouter = require('./routes/publicSpaces');
+const eventRequestsRouter = require('./routes/eventRequests');
+const groupRequestsRouter = require('./routes/groupRequests');
 const usersRouter = require('./routes/user.routes');
 const roomsRouter = require('./routes/studyRooms.routes');
 const schedulesRouter = require('./routes/schedule.routes');
@@ -27,6 +33,12 @@ app.get('/', (_req, res) => {
 });
 
 // Routers
+
+app.use('/api/groups', groupsRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api/public-spaces', publicSpacesRouter);
+app.use('/api/event-requests', eventRequestsRouter);
+app.use('/api/group-requests', groupRequestsRouter);
 app.use('/users', usersRouter);
 app.use('/study-rooms', roomsRouter);
 app.use('/schedules', schedulesRouter);
