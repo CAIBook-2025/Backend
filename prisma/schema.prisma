@@ -9,6 +9,7 @@ datasource db {
 
 model User {
   id                Int           @id @default(autoincrement())
+  auth0_id          String        @unique
   email             String        @unique
   hashed_password   String
   first_name        String
