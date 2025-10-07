@@ -4,16 +4,16 @@ const cors = require('cors');
 
 // Routers
 
+const roomsRouter = require('./routes/studyRooms.routes');
+const schedulesRouter = require('./routes/schedule.routes');
+const strikesRouter = require('./routes/strikes.routes');
+const attendanceRouter = require('./routes/attendance.routes');
 const groupsRouter = require('./routes/groups.routes');
 const eventsRouter = require('./routes/events.routes');
 const publicSpacesRouter = require('./routes/publicSpaces.routes');
 const eventRequestsRouter = require('./routes/eventRequests.routes');
 const groupRequestsRouter = require('./routes/groupRequests.routes');
-const usersRouter = require('./routes/user.routes');
-const roomsRouter = require('./routes/studyRooms.routes');
-const schedulesRouter = require('./routes/schedule.routes');
-const strikesRouter = require('./routes/strikes.routes');
-const attendanceRouter = require('./routes/attendance.routes');
+const userRouter = require('./routes/user.routes');
 
 const app = express();
 
@@ -33,18 +33,15 @@ app.get('/', (_req, res) => {
 });
 
 // Routers
-
+app.use('/api/attendance', attendanceRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/public-spaces', publicSpacesRouter);
 app.use('/api/event-requests', eventRequestsRouter);
 app.use('/api/group-requests', groupRequestsRouter);
-app.use('/users', usersRouter);
-app.use('/study-rooms', roomsRouter);
-app.use('/schedules', schedulesRouter);
-app.use('/strikes', strikesRouter);
-app.use('/attendance', attendanceRouter);
+app.use('/api/users', userRouter);
 
+// Error handler global
 app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal Server Error' });
