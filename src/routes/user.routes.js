@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
 const { checkJwt } = require('../middleware/auth');
-const { usersService } = require('../users/usersService');
+const usersService = require('../users/usersService');
 
 const router = Router();
 
@@ -26,6 +26,32 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /users/profile
+router.get('/profile', checkJwt, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub } });
+    res.json(user);
+  } catch (error) {
+    console.log('ERROR GET /users/profile:', error);
+    res.status(500).json({ error: "No se pudo obtener el perfil del usuario" });
+  }
+});
+
+// GET /users/check
+router.get('/check', checkJwt, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub} });
+    if (user) {
+      res.json({ exists: true, user });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (error) {
+    console.log('ERROR GET /users/check:', error);
+    res.status(500).json({ error: 'No se pudo verificar el usuario' });
+  }
+});
+
 // GET /users/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -42,29 +68,25 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// GET /users/profile
-router.get('/profile', checkJwt, async (req, res) => {
-  try {
-    const user = await usersService.findOrCreateUser(req.auth);
-    res.json(user);
-  } catch (error) {
-    console.log('ERROR GET /users/profile:', error);
-    res.status(500).json({ error: "No se pudo obtener el perfil del usuario" });
-  }
-});
-
 // POST /users
-router.post('/', async (req, res) => {
+router.post('/', checkJwt, async (req, res) => {
   try {
-    const { email, hashed_password, first_name, last_name, role, is_representative, is_moderator } = req.body || {};
-    if (!email || !hashed_password || !first_name || !last_name) {
-      return res.status(400).json({ error: 'email, hashed_password, first_name, last_name son requeridos' });
-    }
+    // const { email, hashed_password, first_name, last_name, role, is_representative, is_moderator } = req.body || {};
+    // if (!email || !hashed_password || !first_name || !last_name) {
+    //   return res.status(400).json({ error: 'email, hashed_password, first_name, last_name son requeridos' });
+    // }
 
     const created = await prisma.user.create({
       data: {
-        email, hashed_password, first_name, last_name,
-        role, is_representative: !!is_representative, is_moderator: !!is_moderator
+        auth0_id: req.body.auth0_id,
+        email: req.body.email,
+        hashed_password: req.body.hashed_password,
+        first_name: req.body.first_name,
+        last_name: req.body.last_name,
+        role: req.body.role,
+        is_representative: req.body.is_representative,
+        is_moderator: req.body.is_moderator,
+        strikes: req.body.strikes
       }
     });
     res.status(201).json(created);
