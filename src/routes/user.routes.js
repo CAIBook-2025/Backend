@@ -26,6 +26,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /users/profile
+router.get('/profile', checkJwt, async (req, res) => {
+  try {
+    const user = await usersService.findOrCreateUser(req.auth);
+    res.json(user);
+  } catch (error) {
+    console.log('ERROR GET /users/profile:', error);
+    res.status(500).json({ error: "No se pudo obtener el perfil del usuario" });
+  }
+});
+
 // GET /users/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -39,17 +50,6 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.log('ERROR GET /users/:id:', error);
     res.status(500).json({ error: 'No se pudo obtener el usuario' });
-  }
-});
-
-// GET /users/profile
-router.get('/profile', checkJwt, async (req, res) => {
-  try {
-    const user = await usersService.findOrCreateUser(req.auth);
-    res.json(user);
-  } catch (error) {
-    console.log('ERROR GET /users/profile:', error);
-    res.status(500).json({ error: "No se pudo obtener el perfil del usuario" });
   }
 });
 

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "prisma:migrate": "prisma migrate dev",
@@ -34,7 +34,9 @@
     "passport-jwt": "^4.0.1"
   },
   "devDependencies": {
+    "jest": "^30.2.0",
     "nodemon": "^3.1.10",
-    "prisma": "^6.16.2"
+    "prisma": "^6.16.2",
+    "supertest": "^7.1.4"
   }
 }
