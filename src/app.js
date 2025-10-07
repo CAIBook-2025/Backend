@@ -3,6 +3,10 @@ const morgan = require('morgan');
 const cors = require('cors');
 
 // Routers
+
+const roomsRouter = require('./routes/studyRooms.routes');
+const schedulesRouter = require('./routes/schedule.routes');
+const strikesRouter = require('./routes/strikes.routes');
 const attendanceRouter = require('./routes/attendance.routes');
 const groupsRouter = require('./routes/groups.routes');
 const eventsRouter = require('./routes/events.routes');
