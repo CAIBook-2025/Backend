@@ -1,0 +1,124 @@
+name: CI Pipeline
+
+on:
+  # Ejecuta en push a las ramas principales
+  push:
+    branches: [ main, develop ]
+  
+  # Ejecuta en pull requests hacia las ramas principales
+  pull_request:
+    branches: [ main, develop ]
+  
+  # Permite ejecución manual desde la interfaz de GitHub
+  workflow_dispatch:
+
+jobs:
+  # Job principal de testing y validación
+  test:
+    name: Test & Validate
+    runs-on: ubuntu-latest
+    
+    # Matriz de estrategia para probar múltiples versiones de Node.js
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+        
+    steps:
+    # 1. Checkout del código
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    # 2. Setup de Node.js con la versión especificada
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    # 3. Instalar dependencias con cache
+    - name: Install dependencies
+      run: npm ci
+      
+    # 4. Verificar formato y linting (si existe configuración)
+    - name: Run linting (optional)
+      run: |
+        if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || [ -f "package.json" ]; then
+          if npm list eslint > /dev/null 2>&1; then
+            echo "Running ESLint..."
+            npm run lint || true
+          else
+            echo "ESLint not configured, skipping..."
+          fi
+        fi
+      continue-on-error: true
+      
+    # 5. Verificar formato con Prettier (si existe)
+    - name: Check code formatting (optional)
+      run: |
+        if npm list prettier > /dev/null 2>&1; then
+          echo "Checking Prettier formatting..."
+          npm run format:check || true
+        else
+          echo "Prettier not configured, skipping..."
+        fi
+      continue-on-error: true
+      
+    # 6. Ejecutar tests unitarios
+    - name: Run tests
+      run: npm test
+        
+    # 7. Verificar vulnerabilidades de seguridad
+    - name: Run security audit (optional)
+      run: |
+        if command -v npm >/dev/null 2>&1; then
+          echo "Running security audit..."
+          npm audit --audit-level=moderate || echo "Security audit completed with warnings (non-blocking)"
+        else
+          echo "audit not configured, skipping audit..."
+        fi
+      continue-on-error: true
+
+  # Job para validar la estructura del proyecto
+  validate-structure:
+    name: Validate Project Structure
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    # Verificar que existan archivos esenciales
+    - name: Check essential files
+      run: |
+        echo "🔍 Validating project structure..."
+        
+        # Verificar package.json
+        if [ ! -f "package.json" ]; then
+          echo "❌ package.json not found"
+          exit 1
+        else
+          echo "✅ package.json found"
+        fi
+        
+        # Verificar estructura de src
+        if [ ! -d "src" ]; then
+          echo "❌ src directory not found"
+          exit 1
+        else
+          echo "✅ src directory found"
+        fi
+        
+        # Verificar tests
+        if [ ! -d "test" ] && [ ! -d "tests" ] && [ ! -d "__tests__" ]; then
+          echo "❌ No test directory found"
+          exit 1
+        else
+          echo "✅ Test directory found"
+        fi
+        
+        echo "✅ Project structure validation passed"
+
+# Variables de entorno globales para CI
+env:
+  CI: true
+  NODE_ENV: test
