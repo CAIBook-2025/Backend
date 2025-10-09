@@ -71,29 +71,9 @@ router.get('/:id', async (req, res) => {
 // POST /users
 router.post('/', checkJwt, async (req, res) => {
   try {
-    // const { email, hashed_password, first_name, last_name, role, is_representative, is_moderator } = req.body || {};
-    // if (!email || !hashed_password || !first_name || !last_name) {
-    //   return res.status(400).json({ error: 'email, hashed_password, first_name, last_name son requeridos' });
-    // }
-
-    const created = await prisma.user.create({
-      data: {
-        auth0_id: req.body.auth0_id,
-        email: req.body.email,
-        hashed_password: req.body.hashed_password,
-        first_name: req.body.first_name,
-        last_name: req.body.last_name,
-        role: req.body.role,
-        is_representative: req.body.is_representative,
-        is_moderator: req.body.is_moderator,
-        strikes: req.body.strikes
-      }
-    });
-    res.status(201).json(created);
+    const user = await usersService.createUser(req.body);
+    res.status(201).json(user);
   } catch (error) {
-    if (error?.code === 'P2002' && error?.meta?.target?.includes('email')) {
-      return res.status(409).json({ error: 'Email ya existe' });
-    }
     console.log('ERROR POST /users:', error);
     res.status(500).json({ error: 'No se pudo crear el usuario' });
   }
