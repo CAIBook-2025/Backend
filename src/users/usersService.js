@@ -30,6 +30,13 @@ class UsersService {
 
         return user;
     }
+
+    async createUser(userData) {
+        const user = await prisma.user.create({
+            data: {...userData}
+        })
+        return user; 
+    }
 }
 
 module.exports = new UsersService();
