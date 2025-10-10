@@ -41,6 +41,13 @@ app.use('/api/event-requests', eventRequestsRouter);
 app.use('/api/group-requests', groupRequestsRouter);
 app.use('/api/users', userRouter);
 
+// JWT error handler
+app.use((err, _req, res, _next) => {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 // Error handler global
 app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
