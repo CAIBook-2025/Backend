@@ -33,13 +33,16 @@ app.get('/', (_req, res) => {
 });
 
 // Routers
-app.use('/api/attendance', attendanceRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/public-spaces', publicSpacesRouter);
 app.use('/api/event-requests', eventRequestsRouter);
 app.use('/api/group-requests', groupRequestsRouter);
-app.use('/api/users', userRouter);
+app.use('/users', userRouter);
+app.use('/study-rooms', roomsRouter);
+app.use('/schedules', schedulesRouter);
+app.use('/strikes', strikesRouter);
+app.use('/attendance', attendanceRouter);
 
 // Error handler global
 app.use((err, _req, res, _next) => {
