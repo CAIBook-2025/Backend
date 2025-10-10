@@ -40,6 +40,9 @@ app.use('/api/public-spaces', publicSpacesRouter);
 app.use('/api/event-requests', eventRequestsRouter);
 app.use('/api/group-requests', groupRequestsRouter);
 app.use('/api/users', userRouter);
+app.use('/api/sRooms', roomsRouter);
+app.use('/api/srSchedule', schedulesRouter);
+app.use('/api/strikes', strikesRouter);
 
 // Error handler global
 app.use((err, _req, res, _next) => {

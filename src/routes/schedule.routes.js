@@ -7,9 +7,9 @@ const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
 // GET /schedules?srId=&date=YYYY-MM-DD&page=&take=
 router.get('/', async (req, res) => {
   try {
-    const limit = Math.min(Math.max(Number(req.query.take) || 20, 1), 100);
+    const take = Math.min(Math.max(Number(req.query.take) || 20, 1), 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * take;
 
     const where = {};
     if (req.query.srId) where.srId = Number(req.query.srId);
@@ -22,13 +22,13 @@ router.get('/', async (req, res) => {
 
     const [items, total] = await Promise.all([
       prisma.sRScheduling.findMany({
-        where, limit, skip, orderBy: { startsAt: 'asc' },
+        where, take, skip, orderBy: { startsAt: 'asc' },
         include: { user: true, studyRoom: true }
       }),
       prisma.sRScheduling.count({ where })
     ]);
 
-    res.json({ page, limit, total, items });
+    res.json({ page, take, total, items });
   } catch (error) {
     console.log('ERROR GET /schedules:', error);
     res.status(500).json({ error: 'No se pudieron listar los horarios' });
@@ -57,33 +57,26 @@ router.get('/:id', async (req, res) => {
 // POST /schedules
 router.post('/', async (req, res) => {
   try {
-    const { userId, srId, startsAt, endsAt, status } = req.body || {};
-    if (!userId || !srId || !startsAt || !endsAt) {
-      return res.status(400).json({ error: 'userId, srId, startsAt, endsAt son requeridos' });
-    }
-
-    const start = new Date(startsAt);
-    const end   = new Date(endsAt);
-    if (isNaN(start) || isNaN(end) || start >= end) {
-      return res.status(400).json({ error: 'Rango de tiempo inválido' });
+    const { userId, srId, day, module, available } = req.body || {};
+    if (!userId || !srId || !day || !module ) {
+      return res.status(400).json({ error: 'userId, srId, day, module son requeridos' });
     }
 
     // Chequeo de solape en la misma sala
     const existing = await prisma.sRScheduling.findMany({
       where: {
-        srId,
-        startsAt: { lt: end },
-        endsAt:   { gt: start },
-        status: { in: ['PENDING', 'CONFIRMED'] }
+        sr_id: srId,
+        day,
+        module
       },
-      select: { id: true, startsAt: true, endsAt: true }
+      select: { id: true, module }
     });
     if (existing.some(r => overlaps(start, end, r.startsAt, r.endsAt))) {
       return res.status(409).json({ error: 'Solape con otro horario en la sala' });
     }
 
     const created = await prisma.sRScheduling.create({
-      data: { userId, srId, startsAt: start, endsAt: end, status: status || 'PENDING' }
+      data: { user_id: userId, sr_id: srId, day, module, available }
     });
     res.status(201).json(created);
   } catch (error) {
