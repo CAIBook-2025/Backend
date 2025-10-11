@@ -7,23 +7,34 @@ const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
 // GET /schedules?srId=&date=YYYY-MM-DD&page=&take=
 router.get('/', async (req, res) => {
   try {
-    const take = Math.min(Math.max(Number(req.query.take) || 20, 1), 100);
+    const take = Math.min(Math.max(Number(req.query.take) || 30, 1), 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
     const skip = (page - 1) * take;
 
     const where = {};
-    if (req.query.srId) where.srId = Number(req.query.srId);
-    if (req.query.date) {
-      const dayStart = new Date(`${req.query.date}T00:00:00.000Z`);
-      const dayEnd   = new Date(`${req.query.date}T23:59:59.999Z`);
-      where.startsAt = { lt: dayEnd };
-      where.endsAt   = { gt: dayStart };
+
+    const date = new Date(`${String(req.query.day)}T00:00:00.000Z`)
+    console.log(date);
+
+    if (req.query.day) {
+      const dateStr = String(req.query.day);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return res.status(400).json({ error: 'El formato de date debe ser YYYY-MM-DD' });
+      }
+      // Igualdad exacta a medianoche UTC
+      const dayUTC = new Date(`${dateStr}T00:00:00.000Z`);
+      where.day = { equals: dayUTC };
     }
 
     const [items, total] = await Promise.all([
       prisma.sRScheduling.findMany({
-        where, take, skip, orderBy: { startsAt: 'asc' },
-        include: { user: true, studyRoom: true }
+        where,
+        take,
+        skip,
+        orderBy: [{ day: 'asc' }, { module: 'asc' }],
+        include: {
+          studyRoom: true,
+        }
       }),
       prisma.sRScheduling.count({ where })
     ]);
