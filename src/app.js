@@ -3,6 +3,7 @@ const morgan = require('morgan');
 const cors = require('cors');
 
 // Routers
+//comment trial added
 
 const roomsRouter = require('./routes/studyRooms.routes');
 const schedulesRouter = require('./routes/schedule.routes');
