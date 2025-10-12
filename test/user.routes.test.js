@@ -56,8 +56,8 @@ describe('User Routes', () => {
 
   it('PATCH /users/:id - debería actualizar un user', async () => {
     const updatedUser = {
-      first_name: "Juan Carlos",
-      career: "Ingeniería Industrial"
+      first_name: 'Juan Carlos',
+      career: 'Ingeniería Industrial'
     };
     const res = await request(app).patch('/api/users/1').send(updatedUser);
     expect(res.status).toBe(200);

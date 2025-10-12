@@ -16,8 +16,8 @@ describe('Group Requests Routes', () => {
 
   it('POST /api/group-requests - debería crear una nueva group request', async () => {
     const newGroupRequest = {
-      name: "Grupo de estudio",
-      description: "Grupo para preparar examen de matemáticas",
+      name: 'Grupo de estudio',
+      description: 'Grupo para preparar examen de matemáticas',
       representativeId: 1
     };
     const res = await request(app).post('/api/group-requests').send(newGroupRequest);
@@ -27,8 +27,8 @@ describe('Group Requests Routes', () => {
 
   it('PATCH /api/group-requests/:id - debería actualizar una group request', async () => {
     const updatedGroupRequest = {
-      name: "Grupo actualizado",
-      description: "Nueva descripción del grupo"
+      name: 'Grupo actualizado',
+      description: 'Nueva descripción del grupo'
     };
     const res = await request(app).patch('/api/group-requests/1').send(updatedGroupRequest);
     expect(res.status).toBe(200);

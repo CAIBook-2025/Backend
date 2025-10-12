@@ -19,7 +19,7 @@ describe('Attendance Routes', () => {
       student_id: 1,
       event_id: 2,
       rating: 5,
-      feedback: "Excelente evento!"
+      feedback: 'Excelente evento!'
     };
     const res = await request(app).post('/api/attendance').send(newAttendance);
     expect(res.status).toBe(201);
@@ -29,7 +29,7 @@ describe('Attendance Routes', () => {
   it('PATCH /api/attendance/:id - debería actualizar una attendance', async () => {
     const updatedAttendance = {
       rating: 4,
-      feedback: "Buen evento"
+      feedback: 'Buen evento'
     };
     const res = await request(app).patch('/api/attendance/1').send(updatedAttendance);
     expect(res.status).toBe(200);

@@ -108,8 +108,8 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       const schedule = {
         srId: roomResponse.body.id,
         day: futureDay.toISOString().split('T')[0] + 'T00:00:00.000Z',
-        module: "09:00-11:00",
-        available: "OCCUPIED"
+        module: '09:00-11:00',
+        available: 'OCCUPIED'
       };
       
       const scheduleResponse = await request(app)

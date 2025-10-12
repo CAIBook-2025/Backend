@@ -64,7 +64,7 @@ router.get('/profile', checkJwt, async (req, res) => {
 
     console.log(schedules);
     console.log(strikes);
-    console.log("strikes.length:", strikes.length);
+    console.log('strikes.length:', strikes.length);
 
     const upcomingEvents = attendances
       .filter(a => a.event?.start_time && a.event.start_time >= now)
@@ -92,12 +92,16 @@ router.get('/profile', checkJwt, async (req, res) => {
       schedule: reservasActivas,
       scheduleCount: reservasActivas.length,
       strikes,
-      strikesCount: strikes.length
-    }
+      strikesCount: strikes.length,
+      upcomingEvents,
+      upcomingEventsCount: upcomingEvents.length,
+      attendances,
+      attendancesCount: attendances.length
+    };
     res.json(completeData);
   } catch (error) {
     console.log('ERROR GET /users/profile:', error);
-    res.status(500).json({ error: "No se pudo obtener el perfil del usuario" });
+    res.status(500).json({ error: 'No se pudo obtener el perfil del usuario' });
   }
 });
 

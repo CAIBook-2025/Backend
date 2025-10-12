@@ -78,9 +78,9 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
     it('POST /api/srSchedule - debería manejar módulos cortos', async () => {
       const shortSchedule = {
         srId: 2,
-        day: "2024-12-02T00:00:00.000Z",
-        module: "07:00-07:30", // Módulo de 30 minutos
-        available: "AVAILABLE"
+        day: '2024-12-02T00:00:00.000Z',
+        module: '07:00-07:30', // Módulo de 30 minutos
+        available: 'AVAILABLE'
       };
       
       const res = await request(app)

@@ -28,8 +28,8 @@ describe('Strikes Routes', () => {
 
   it('PATCH /api/strikes/:id - debería actualizar un strike', async () => {
     const updatedStrike = {
-      description: "Descripción actualizada",
-      type: "BEHAVIOR"
+      description: 'Descripción actualizada',
+      type: 'BEHAVIOR'
     };
     const res = await request(app).patch('/api/strikes/1').send(updatedStrike);
     expect(res.status).toBe(200);
