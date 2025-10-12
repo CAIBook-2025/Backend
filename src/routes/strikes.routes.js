@@ -33,14 +33,14 @@ router.get('/:id', async (req, res) => {
 // POST /strikes
 router.post('/', async (req, res) => {
   try {
-    const { student_id, reason, admin_id, description, date } = req.body || {};
-    if (!student_id || !reason || !admin_id) {
-      return res.status(400).json({ error: 'student_id, reason, admin_id son requeridos' });
+    const { student_id, description, date, type, admin_id } = req.body || {};
+    if (!student_id || !type || !admin_id) {
+      return res.status(400).json({ error: 'student_id, type, admin_id son requeridos' });
     }
 
     const created = await prisma.strike.create({
       data: {
-        student_id, reason, admin_id,
+        student_id, type, admin_id,
         description: description ?? null,
         date: date ? new Date(date) : undefined
       }

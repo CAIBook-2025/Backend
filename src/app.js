@@ -3,6 +3,7 @@ const morgan = require('morgan');
 const cors = require('cors');
 
 // Routers
+//comment trial added
 
 const roomsRouter = require('./routes/studyRooms.routes');
 const schedulesRouter = require('./routes/schedule.routes');
@@ -38,11 +39,17 @@ app.use('/api/events', eventsRouter);
 app.use('/api/public-spaces', publicSpacesRouter);
 app.use('/api/event-requests', eventRequestsRouter);
 app.use('/api/group-requests', groupRequestsRouter);
-app.use('/users', userRouter);
-app.use('/study-rooms', roomsRouter);
-app.use('/schedules', schedulesRouter);
-app.use('/strikes', strikesRouter);
-app.use('/attendance', attendanceRouter);
+app.use('/api/users', userRouter);
+app.use('/api/sRooms', roomsRouter);
+app.use('/api/srSchedule', schedulesRouter);
+app.use('/api/strikes', strikesRouter);
+
+// JWT error handler
+app.use((err, _req, res, _next) => {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
 
 // Error handler global
 app.use((err, _req, res, _next) => {
