@@ -34,7 +34,6 @@ app.get('/', (_req, res) => {
 });
 
 // Routers
-app.use('/api/attendance', attendanceRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/public-spaces', publicSpacesRouter);
