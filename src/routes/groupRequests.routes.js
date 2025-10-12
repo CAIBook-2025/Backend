@@ -48,7 +48,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { user_id, name, goal, description, logo } = req.body || {};
-    console.log("está entrando al try????");
+    console.log('está entrando al try????');
     
     // if (!name || !description) {
     //   return res.status(400).json({ error: 'name y description son requeridos' });
@@ -60,15 +60,15 @@ router.post('/', async (req, res) => {
       goal: goal,
       description: description,
       logo: logo,
-      status: "PENDING"
-    }
+      status: 'PENDING'
+    };
 
     const created = await prisma.groupRequest.create({ data });    
     res.status(201).json(created);
 
   } catch (error) {
 
-    console.log('Hay un error???')
+    console.log('Hay un error???');
     if (error?.code === 'P2002') {
       return res.status(409).json({ error: 'Ya existe un grupo con ese nombre' });
     }

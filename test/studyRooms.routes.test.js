@@ -17,10 +17,10 @@ describe('Study Rooms Routes', () => {
 
   it('POST /study-rooms - debería crear una nueva study room', async () => {
     const newStudyRoom = {
-      name: "Sala de estudio A",
+      name: 'Sala de estudio A',
       capacity: 10,
       availability: true,
-      resources: "Proyector, WiFi"
+      resources: 'Proyector, WiFi'
     };
     const res = await request(app).post('/api/sRooms').send(newStudyRoom);
     expect(res.status).toBe(201);
@@ -29,7 +29,7 @@ describe('Study Rooms Routes', () => {
 
   it('PATCH /api/sRooms/:id - debería actualizar una study room', async () => {
     const updatedStudyRoom = {
-      name: "Sala actualizada",
+      name: 'Sala actualizada',
       capacity: 15
     };
     const res = await request(app).patch('/api/sRooms/1').send(updatedStudyRoom);

@@ -18,9 +18,9 @@ describe('Schedule Routes', () => {
   it('POST /api/srSchedule - debería crear un nuevo schedule', async () => {
     const newSchedule = {
       srId: 1,
-      day: "2024-12-01T00:00:00.000Z",
-      module: "08:00-09:30",
-      available: "AVAILABLE"
+      day: '2024-12-01T00:00:00.000Z',
+      module: '08:00-09:30',
+      available: 'AVAILABLE'
     };
     const res = await request(app).post('/api/srSchedule').send(newSchedule);
     expect(res.status).toBe(201);

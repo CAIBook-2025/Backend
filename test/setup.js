@@ -144,6 +144,7 @@ jest.mock('../src/lib/prisma', () => ({
     },
     sRScheduling: {
       findMany: jest.fn().mockResolvedValue([]), // No conflicts by default
+      findFirst: jest.fn().mockResolvedValue(null), // No existing conflicts by default
       findUnique: jest.fn((args) => {
         if (args?.where?.id && args.where.id < 1000) {
           return Promise.resolve({ 
