@@ -7,15 +7,6 @@ router.get('/', async (_req, res) => {
   try {
     const items = await prisma.group.findMany({ 
       orderBy: { id: 'asc' },
-      include: {
-        representative: {
-          select: { id: true, first_name: true, last_name: true, email: true }
-        },
-        moderators: {
-          select: { id: true, first_name: true, last_name: true, email: true }
-        },
-        groupRequest: true
-      }
     });
     res.json(items);
   } catch (error) {
@@ -53,32 +44,31 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /groups
+// POST /groups-requests
 router.post('/', async (req, res) => {
   try {
-    const { name, description, representativeId, group_request_id, moderators_ids } = req.body || {};
+    const { user_id, name, goal, description, logo } = req.body || {};
+    console.log("está entrando al try????");
     
-    if (!name || !representativeId) {
-      return res.status(400).json({ error: 'name y representativeId son requeridos' });
+    // if (!name || !description) {
+    //   return res.status(400).json({ error: 'name y description son requeridos' });
+    // }
+
+    const data = {
+      user_id: user_id, 
+      name: name,
+      goal: goal,
+      description: description,
+      logo: logo,
+      status: "PENDING"
     }
 
-    const created = await prisma.group.create({
-      data: { 
-        name, 
-        description: description ?? null,
-        representativeId,
-        group_request_id: group_request_id ?? null,
-        moderators_ids: moderators_ids ?? []
-      },
-      include: {
-        representative: {
-          select: { id: true, first_name: true, last_name: true, email: true }
-        }
-      }
-    });
-    
+    const created = await prisma.groupRequest.create({ data });    
     res.status(201).json(created);
+
   } catch (error) {
+
+    console.log('Hay un error???')
     if (error?.code === 'P2002') {
       return res.status(409).json({ error: 'Ya existe un grupo con ese nombre' });
     }

@@ -7,28 +7,39 @@ const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
 // GET /schedules?srId=&date=YYYY-MM-DD&page=&take=
 router.get('/', async (req, res) => {
   try {
-    const limit = Math.min(Math.max(Number(req.query.take) || 20, 1), 100);
+    const take = Math.min(Math.max(Number(req.query.take) || 30, 1), 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * take;
 
     const where = {};
-    if (req.query.srId) where.srId = Number(req.query.srId);
-    if (req.query.date) {
-      const dayStart = new Date(`${req.query.date}T00:00:00.000Z`);
-      const dayEnd   = new Date(`${req.query.date}T23:59:59.999Z`);
-      where.startsAt = { lt: dayEnd };
-      where.endsAt   = { gt: dayStart };
+
+    const date = new Date(`${String(req.query.day)}T00:00:00.000Z`)
+    console.log(date);
+
+    if (req.query.day) {
+      const dateStr = String(req.query.day);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return res.status(400).json({ error: 'El formato de date debe ser YYYY-MM-DD' });
+      }
+      // Igualdad exacta a medianoche UTC
+      const dayUTC = new Date(`${dateStr}T00:00:00.000Z`);
+      where.day = { equals: dayUTC };
     }
 
     const [items, total] = await Promise.all([
       prisma.sRScheduling.findMany({
-        where, limit, skip, orderBy: { startsAt: 'asc' },
-        include: { user: true, studyRoom: true }
+        where,
+        take,
+        skip,
+        orderBy: [{ day: 'asc' }, { module: 'asc' }],
+        include: {
+          studyRoom: true,
+        }
       }),
       prisma.sRScheduling.count({ where })
     ]);
 
-    res.json({ page, limit, total, items });
+    res.json({ page, take, total, items });
   } catch (error) {
     console.log('ERROR GET /schedules:', error);
     res.status(500).json({ error: 'No se pudieron listar los horarios' });
@@ -57,33 +68,33 @@ router.get('/:id', async (req, res) => {
 // POST /schedules
 router.post('/', async (req, res) => {
   try {
-    const { userId, srId, startsAt, endsAt, status } = req.body || {};
-    if (!userId || !srId || !startsAt || !endsAt) {
-      return res.status(400).json({ error: 'userId, srId, startsAt, endsAt son requeridos' });
+    const { srId, day, module, available } = req.body || {};
+    if (!srId || !day || !module) {
+      return res.status(400).json({ error: 'srId, day, module son requeridos' });
     }
 
-    const start = new Date(startsAt);
-    const end   = new Date(endsAt);
-    if (isNaN(start) || isNaN(end) || start >= end) {
-      return res.status(400).json({ error: 'Rango de tiempo inválido' });
+    let availability;
+    if (!req.body.available) {
+      availability = 'AVAILABLE';
+    } else {
+      availability = req.body.available;
     }
 
     // Chequeo de solape en la misma sala
     const existing = await prisma.sRScheduling.findMany({
       where: {
-        srId,
-        startsAt: { lt: end },
-        endsAt:   { gt: start },
-        status: { in: ['PENDING', 'CONFIRMED'] }
+        sr_id: srId,
+        day,
+        module
       },
-      select: { id: true, startsAt: true, endsAt: true }
+      select: { id: true, module }
     });
     if (existing.some(r => overlaps(start, end, r.startsAt, r.endsAt))) {
       return res.status(409).json({ error: 'Solape con otro horario en la sala' });
     }
 
     const created = await prisma.sRScheduling.create({
-      data: { userId, srId, startsAt: start, endsAt: end, status: status || 'PENDING' }
+      data: { sr_id: srId, day, module, available }
     });
     res.status(201).json(created);
   } catch (error) {
@@ -93,25 +104,43 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PATCH /schedules/:id
-router.patch('/:id', async (req, res) => {
+// PUT /schedules/:id
+router.put('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
+    const { userId } = req.body || {};
 
-    const data = { ...req.body };
-    if (data.startsAt) data.startsAt = new Date(data.startsAt);
-    if (data.endsAt)   data.endsAt   = new Date(data.endsAt);
-    if (data.startsAt && data.endsAt && data.startsAt >= data.endsAt) {
-      return res.status(400).json({ error: 'Rango de tiempo inválido' });
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    if (!userId) {
+      return res.status(400).json({ error: 'userId es requerido' });
     }
 
-    const updated = await prisma.sRScheduling.update({ where: { id }, data });
-    res.json(updated);
+    const result = await prisma.sRScheduling.updateMany({
+      where: {
+        id,
+        user_id: null,
+        available: 'AVAILABLE',
+      },
+      data: {
+        user_id: userId,
+        available: 'UNAVAILABLE',
+      },
+    });
+
+    if (result.count !== 1) {
+      return res.status(409).json({
+        error: 'El horario no está disponible o no existe',
+      });
+    }
+
+    const updated = await prisma.sRScheduling.findUnique({ where: { id } });
+    return res.json(updated);
+
   } catch (error) {
-    if (error?.code === 'P2025') return res.status(404).json({ error: 'Horario no encontrado' });
-    console.log('ERROR PATCH /schedules/:id:', error);
-    res.status(500).json({ error: 'No se pudo actualizar el horario' });
+    console.log('ERROR PUT /schedules/:id/reserve:', error);
+    return res.status(500).json({ error: 'No se pudo reservar el horario' });
   }
 });
 

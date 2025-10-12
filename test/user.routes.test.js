@@ -31,7 +31,10 @@ describe('User Routes', () => {
       first_name: 'Juan',
       last_name: 'Pérez'
     };
-    const res = await request(app).post('/users').send(newUser);
+    const res = await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer valid-jwt-token')
+      .send(newUser);
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('email', 'juan.perez@test.com');
   });

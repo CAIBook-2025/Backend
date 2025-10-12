@@ -39,29 +39,13 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    # 4. Verificar formato y linting (si existe configuración)
-    - name: Run linting (optional)
-      run: |
-        if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || [ -f "package.json" ]; then
-          if npm list eslint > /dev/null 2>&1; then
-            echo "Running ESLint..."
-            npm run lint || true
-          else
-            echo "ESLint not configured, skipping..."
-          fi
-        fi
-      continue-on-error: true
+    # 4. Ejecutar linting con ESLint
+    - name: Run ESLint
+      run: npm run lint
       
-    # 5. Verificar formato con Prettier (si existe)
-    - name: Check code formatting (optional)
-      run: |
-        if npm list prettier > /dev/null 2>&1; then
-          echo "Checking Prettier formatting..."
-          npm run format:check || true
-        else
-          echo "Prettier not configured, skipping..."
-        fi
-      continue-on-error: true
+    # 5. Verificar formato con Prettier
+    - name: Check code formatting with Prettier
+      run: npm run format:check
       
     # 6. Ejecutar tests unitarios
     - name: Run tests
