@@ -68,9 +68,16 @@ router.get('/:id', async (req, res) => {
 // POST /schedules
 router.post('/', async (req, res) => {
   try {
-    const { userId, srId, day, module, available } = req.body || {};
-    if (!userId || !srId || !day || !module ) {
-      return res.status(400).json({ error: 'userId, srId, day, module son requeridos' });
+    const { srId, day, module, available } = req.body || {};
+    if (!srId || !day || !module) {
+      return res.status(400).json({ error: 'srId, day, module son requeridos' });
+    }
+
+    let availability;
+    if (!req.body.available) {
+      availability = 'AVAILABLE';
+    } else {
+      availability = req.body.available;
     }
 
     // Chequeo de solape en la misma sala
@@ -87,7 +94,7 @@ router.post('/', async (req, res) => {
     }
 
     const created = await prisma.sRScheduling.create({
-      data: { user_id: userId, sr_id: srId, day, module, available }
+      data: { sr_id: srId, day, module, available }
     });
     res.status(201).json(created);
   } catch (error) {
@@ -97,25 +104,43 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PATCH /schedules/:id
-router.patch('/:id', async (req, res) => {
+// PUT /schedules/:id
+router.put('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
+    const { userId } = req.body || {};
 
-    const data = { ...req.body };
-    if (data.startsAt) data.startsAt = new Date(data.startsAt);
-    if (data.endsAt)   data.endsAt   = new Date(data.endsAt);
-    if (data.startsAt && data.endsAt && data.startsAt >= data.endsAt) {
-      return res.status(400).json({ error: 'Rango de tiempo inválido' });
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    if (!userId) {
+      return res.status(400).json({ error: 'userId es requerido' });
     }
 
-    const updated = await prisma.sRScheduling.update({ where: { id }, data });
-    res.json(updated);
+    const result = await prisma.sRScheduling.updateMany({
+      where: {
+        id,
+        user_id: null,
+        available: 'AVAILABLE',
+      },
+      data: {
+        user_id: userId,
+        available: 'UNAVAILABLE',
+      },
+    });
+
+    if (result.count !== 1) {
+      return res.status(409).json({
+        error: 'El horario no está disponible o no existe',
+      });
+    }
+
+    const updated = await prisma.sRScheduling.findUnique({ where: { id } });
+    return res.json(updated);
+
   } catch (error) {
-    if (error?.code === 'P2025') return res.status(404).json({ error: 'Horario no encontrado' });
-    console.log('ERROR PATCH /schedules/:id:', error);
-    res.status(500).json({ error: 'No se pudo actualizar el horario' });
+    console.log('ERROR PUT /schedules/:id/reserve:', error);
+    return res.status(500).json({ error: 'No se pudo reservar el horario' });
   }
 });
 
