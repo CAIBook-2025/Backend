@@ -13,7 +13,7 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       };
       
       const userResponse = await request(app)
-        .post('/users')
+        .post('/api/users')
         .set('Authorization', 'Bearer valid-jwt-token')
         .send(newUser);
       
@@ -97,28 +97,27 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       };
       
       const roomResponse = await request(app)
-        .post('/study-rooms')
+        .post('/api/sRooms')
         .send(newRoom);
       
       expect(roomResponse.status).toBe(201);
       
       // 2. Hacer reserva de horario
-      const futureStart = new Date(Date.now() + 2 * 60 * 60 * 1000); // En 2 horas
-      const futureEnd = new Date(futureStart.getTime() + 2 * 60 * 60 * 1000); // 2 horas después
+      const futureDay = new Date(Date.now() + 24 * 60 * 60 * 1000); // Mañana
       
       const schedule = {
-        userId: 1,
         srId: roomResponse.body.id,
-        startsAt: futureStart.toISOString(),
-        endsAt: futureEnd.toISOString()
+        day: futureDay.toISOString().split('T')[0] + 'T00:00:00.000Z',
+        module: "09:00-11:00",
+        available: "OCCUPIED"
       };
       
       const scheduleResponse = await request(app)
-        .post('/schedules')
+        .post('/api/srSchedule')
         .send(schedule);
       
       expect(scheduleResponse.status).toBe(201);
-      expect(scheduleResponse.body).toHaveProperty('userId', 1);
+      expect(scheduleResponse.body).toHaveProperty('sr_id', roomResponse.body.id);
     });
   });
 });

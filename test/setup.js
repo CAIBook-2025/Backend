@@ -148,27 +148,38 @@ jest.mock('../src/lib/prisma', () => ({
         if (args?.where?.id && args.where.id < 1000) {
           return Promise.resolve({ 
             id: args.where.id, 
-            userId: 1, 
-            srId: 1, 
-            startsAt: new Date(), 
-            endsAt: new Date(), 
-            status: 'CONFIRMED' 
+            sr_id: 1,
+            day: 'MONDAY',
+            module: 1,
+            available: 'AVAILABLE',
+            user_id: null
           });
         }
         return Promise.resolve(null);
       }),
       create: jest.fn((args) => {
-        // Validar campos requeridos
-        if (!args?.data?.userId || !args?.data?.srId || !args?.data?.startsAt || !args?.data?.endsAt) {
+        // Validar campos requeridos para sRScheduling (schedule routes)
+        if (!args?.data?.sr_id && !args?.data?.srId) {
           throw new Error('Missing required fields');
         }
-        return Promise.resolve({ id: 1, ...args.data });
+        return Promise.resolve({ 
+          id: 1, 
+          sr_id: args.data.sr_id || args.data.srId, 
+          ...args.data 
+        });
       }),
       update: jest.fn((args) => {
         if (args?.where?.id && args.where.id >= 1000) {
           return Promise.resolve(null);
         }
         return Promise.resolve({ id: args.where.id, ...args.data });
+      }),
+      updateMany: jest.fn((args) => {
+        // Simular actualización exitosa si el ID es válido y está disponible
+        if (args?.where?.id && args.where.id < 1000) {
+          return Promise.resolve({ count: 1 });
+        }
+        return Promise.resolve({ count: 0 });
       }),
       delete: jest.fn().mockResolvedValue({}),
       count: jest.fn().mockResolvedValue(1)

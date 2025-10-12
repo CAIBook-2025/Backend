@@ -43,6 +43,7 @@ app.use('/api/users', userRouter);
 app.use('/api/sRooms', roomsRouter);
 app.use('/api/srSchedule', schedulesRouter);
 app.use('/api/strikes', strikesRouter);
+app.use('/api/attendance', attendanceRouter);
 
 // JWT error handler
 app.use((err, _req, res, _next) => {
