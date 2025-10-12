@@ -47,24 +47,25 @@ router.get('/:id', async (req, res) => {
 // POST /groups-requests
 router.post('/', async (req, res) => {
   try {
-    const { user_id, name, goal, description } = req.body || {};
+    const { user_id, name, goal, description, logo } = req.body || {};
+    console.log("está entrando al try????");
     
-    if (!name || !description) {
-      return res.status(400).json({ error: 'name y description son requeridos' });
+    // if (!name || !description) {
+    //   return res.status(400).json({ error: 'name y description son requeridos' });
+    // }
+
+    const data = {
+      user_id: user_id, 
+      name: name,
+      goal: goal,
+      description: description,
+      logo: logo,
+      status: "PENDING"
     }
 
-    const created = await prisma.groupRequest.create({
-      data: { 
-        user_id, 
-        name,
-        goal: goal ?? null,
-        description: description ?? null,
-        date: new Date(),
-        status: "PENDING"
-      }
-    });
-    
+    const created = await prisma.groupRequest.create({ data });    
     res.status(201).json(created);
+
   } catch (error) {
 
     console.log('Hay un error???')
