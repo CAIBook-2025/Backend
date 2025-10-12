@@ -45,6 +45,13 @@ app.use('/api/sRooms', roomsRouter);
 app.use('/api/srSchedule', schedulesRouter);
 app.use('/api/strikes', strikesRouter);
 
+// JWT error handler
+app.use((err, _req, res, _next) => {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 // Error handler global
 app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
