@@ -32,8 +32,8 @@ describe('Events Routes', () => {
 
   it('PATCH /api/events/:id - debería actualizar un event', async () => {
     const updatedEvent = {
-      title: "Evento actualizado",
-      description: "Nueva descripción"
+      title: 'Evento actualizado',
+      description: 'Nueva descripción'
     };
     const res = await request(app).patch('/api/events/1').send(updatedEvent);
     expect(res.status).toBe(200);

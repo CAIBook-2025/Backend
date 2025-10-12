@@ -7,7 +7,9 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix"
   },
   "repository": {
     "type": "git",
@@ -34,6 +36,9 @@
     "passport-jwt": "^4.0.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "eslint": "^9.37.0",
+    "globals": "^16.4.0",
     "jest": "^30.2.0",
     "nodemon": "^3.1.10",
     "prisma": "^6.16.2",

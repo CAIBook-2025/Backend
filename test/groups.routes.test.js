@@ -27,8 +27,8 @@ describe('Groups Routes', () => {
 
   it('PATCH /api/groups/:id - debería actualizar un group', async () => {
     const updatedGroup = {
-      name: "Grupo actualizado",
-      description: "Nueva descripción del grupo"
+      name: 'Grupo actualizado',
+      description: 'Nueva descripción del grupo'
     };
     const res = await request(app).patch('/api/groups/1').send(updatedGroup);
     expect(res.status).toBe(200);

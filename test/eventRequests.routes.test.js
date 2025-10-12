@@ -20,9 +20,9 @@ describe('Event Requests Routes', () => {
     const newEventRequest = {
       group_id: 1,
       public_space_id: 1,
-      name: "Evento de prueba",
-      goal: "Objetivo del evento",
-      description: "Descripción del evento",
+      name: 'Evento de prueba',
+      goal: 'Objetivo del evento',
+      description: 'Descripción del evento',
       date: futureDate.toISOString(),
       n_attendees: 50
     };
@@ -33,7 +33,7 @@ describe('Event Requests Routes', () => {
 
   it('PATCH /api/event-requests/:id - debería actualizar una event request', async () => {
     const updatedEventRequest = {
-      name: "Evento actualizado",
+      name: 'Evento actualizado',
       n_attendees: 75
     };
     const res = await request(app).patch('/api/event-requests/1').send(updatedEventRequest);

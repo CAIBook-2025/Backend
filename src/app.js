@@ -34,13 +34,23 @@ app.get('/', (_req, res) => {
 });
 
 // Routers
-app.use('/api/attendance', attendanceRouter);
 app.use('/api/groups', groupsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/public-spaces', publicSpacesRouter);
 app.use('/api/event-requests', eventRequestsRouter);
 app.use('/api/group-requests', groupRequestsRouter);
 app.use('/api/users', userRouter);
+app.use('/api/sRooms', roomsRouter);
+app.use('/api/srSchedule', schedulesRouter);
+app.use('/api/strikes', strikesRouter);
+app.use('/api/attendance', attendanceRouter);
+
+// JWT error handler
+app.use((err, _req, res, _next) => {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
 
 // Error handler global
 app.use((err, _req, res, _next) => {

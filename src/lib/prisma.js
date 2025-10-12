@@ -1,5 +1,5 @@
 // src/lib/prisma.js
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('@prisma/client'); // Max: tuve que cambiar esta ruta para que me pescara la db, si no funciona, chequear esto
 
 let prisma;
 if (process.env.NODE_ENV === 'production') {

@@ -2,43 +2,42 @@ const request = require('supertest');
 const app = require('../src/app');  
 
 describe('Schedule Routes', () => {
-  it('GET /schedules - debería devolver todos los schedule', async () => {
-    const res = await request(app).get('/schedules');
+  it('GET /api/srSchedule - debería devolver todos los schedule', async () => {
+    const res = await request(app).get('/api/srSchedule');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('items');
     expect(Array.isArray(res.body.items)).toBe(true);
   });
 
-  it('GET /schedules/:id - debería devolver un schedule específico', async () => {
-    const res = await request(app).get('/schedules/1'); 
+  it('GET /api/srSchedule/:id - debería devolver un schedule específico', async () => {
+    const res = await request(app).get('/api/srSchedule/1'); 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', 1);
   });
 
-  it('POST /schedules - debería crear un nuevo schedule', async () => {
+  it('POST /api/srSchedule - debería crear un nuevo schedule', async () => {
     const newSchedule = {
-      userId: 1,
       srId: 1,
-      startsAt: "2024-12-01T08:00:00.000Z",
-      endsAt: "2024-12-01T09:30:00.000Z"
+      day: '2024-12-01T00:00:00.000Z',
+      module: '08:00-09:30',
+      available: 'AVAILABLE'
     };
-    const res = await request(app).post('/schedules').send(newSchedule);
+    const res = await request(app).post('/api/srSchedule').send(newSchedule);
     expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('userId', 1);
+    expect(res.body).toHaveProperty('sr_id', 1);
   });
 
-  it('PATCH /schedules/:id - debería actualizar un schedule', async () => {
-    const updatedSchedule = {
-      subject: "Física",
-      day: "Tuesday"
+  it('PUT /api/srSchedule/:id - debería reservar un schedule', async () => {
+    const reserveData = {
+      userId: 1
     };
-    const res = await request(app).patch('/schedules/1').send(updatedSchedule);
+    const res = await request(app).put('/api/srSchedule/1').send(reserveData);
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('subject', 'Física');
+    expect(res.body).toHaveProperty('sr_id', 1);
   });
 
-  it('DELETE /schedules/:id - debería eliminar un schedule', async () => {
-    const res = await request(app).delete('/schedules/1');
+  it('DELETE /api/srSchedule/:id - debería eliminar un schedule', async () => {
+    const res = await request(app).delete('/api/srSchedule/1');
     expect(res.status).toBe(204);
   });
 });

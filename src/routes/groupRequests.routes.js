@@ -234,6 +234,7 @@ router.post('/', checkJwt, async (req, res) => {
     });
     
     res.status(201).json(created);
+
   } catch (error) {
     console.log('ERROR POST /group-requests:', error);
     res.status(500).json({ error: 'No se pudo crear la solicitud de grupo' });
