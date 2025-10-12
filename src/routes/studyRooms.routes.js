@@ -6,16 +6,16 @@ const router = Router();
 // GET /study-rooms
 router.get('/', async (req, res) => {
   try {
-    const limit = Math.min(Math.max(Number(req.query.take) || 50, 1), 100);
+    const take = Math.min(Math.max(Number(req.query.take) || 20, 1), 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * take;
 
     const [items, total] = await Promise.all([
-      prisma.studyRoom.findMany({ limit, offset, orderBy: { id: 'asc' } }),
+      prisma.studyRoom.findMany({ take, skip, orderBy: { id: 'asc' } }),
       prisma.studyRoom.count()
     ]);
 
-    res.json({ page, limit, total, items });
+    res.json({ page, take, total, items });
   } catch (error) {
     console.log('ERROR GET /study-rooms:', error);
     res.status(500).json({ error: 'No se pudo listar salas' });
@@ -41,11 +41,11 @@ router.get('/:id', async (req, res) => {
 // POST /study-rooms
 router.post('/', async (req, res) => {
   try {
-    const { name, capacity, availability } = req.body || {};
+    const { name, location, capacity, equipment } = req.body || {};
     if (!name) return res.status(400).json({ error: 'name es requerido' });
 
     const created = await prisma.studyRoom.create({
-      data: { name, capacity: capacity ?? null, availability }
+      data: { name, location, capacity: capacity ?? 10, equipment: equipment ?? null }
     });
     res.status(201).json(created);
   } catch (error) {

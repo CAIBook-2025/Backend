@@ -29,8 +29,72 @@ router.get('/', async (req, res) => {
 // GET /users/profile
 router.get('/profile', checkJwt, async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub } });
-    res.json(user);
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub },
+      select: { id: true, first_name: true, last_name: true, email: true }
+    });
+
+    const now = new Date();
+
+    const [schedules, strikes, attendances] = await Promise.all([
+      // Reservas de salas del usuario (SRScheduling) + sala
+      prisma.sRScheduling.findMany({
+        where: { user_id: user.id }, // "activas" = desde hoy
+        include: { studyRoom: true },
+        orderBy: [{ day: 'asc' }, { module: 'asc' }],
+      }),
+
+      // Strikes recibidos por el estudiante
+      prisma.strike.findMany({
+        where: { student_id: user.id },
+        orderBy: { date: 'desc' },
+      }),
+
+      // Asistencias del usuario a eventos (+ evento y + solicitud del evento para el nombre)
+      prisma.attendance.findMany({
+        where: { student_id: user.id },
+        include: {
+          event: {                    // EventsScheduling
+            include: { eventRequest: true }, // para obtener "name", "goal", etc.
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    console.log(schedules);
+    console.log(strikes);
+    console.log("strikes.length:", strikes.length);
+
+    const upcomingEvents = attendances
+      .filter(a => a.event?.start_time && a.event.start_time >= now)
+      .map(a => ({
+        id: a.event.id,
+        title: a.event.eventRequest?.name ?? 'Evento',
+        start: a.event.start_time,
+        end: a.event.end_time,
+        status: 'DISPONIBLE',
+      }))
+      .sort((a, b) => +new Date(a.start) - +new Date(b.start));
+
+    const reservasActivas = schedules.map(s => ({
+      id: s.id,
+      roomName: s.studyRoom?.name ?? 'Sala',
+      location: s.studyRoom?.location ?? '',
+      day: s.day,
+      module: s.module,
+    }));
+
+    console.log(reservasActivas);
+
+    const completeData = {
+      user,
+      schedule: reservasActivas,
+      scheduleCount: reservasActivas.length,
+      strikes,
+      strikesCount: strikes.length
+    }
+    res.json(completeData);
   } catch (error) {
     console.log('ERROR GET /users/profile:', error);
     res.status(500).json({ error: "No se pudo obtener el perfil del usuario" });
@@ -40,8 +104,9 @@ router.get('/profile', checkJwt, async (req, res) => {
 // GET /users/check
 router.get('/check', checkJwt, async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub} });
+    const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub } });
     if (user) {
+      console.log(user);
       res.json({ exists: true, user });
     } else {
       res.json({ exists: false });

@@ -33,7 +33,7 @@ router.get('/:id', async (req, res) => {
 // POST /public-spaces
 router.post('/', async (req, res) => {
   try {
-    const { name, capacity, availability } = req.body || {};
+    const { name, capacity, location, available } = req.body || {};
     
     if (!name) {
       return res.status(400).json({ error: 'name es requerido' });
@@ -42,8 +42,9 @@ router.post('/', async (req, res) => {
     const created = await prisma.publicSpace.create({
       data: { 
         name, 
+        location,
         capacity: capacity ?? null,
-        availability: availability ?? 'AVAILABLE'
+        available: available ?? 'AVAILABLE'
       }
     });
     
