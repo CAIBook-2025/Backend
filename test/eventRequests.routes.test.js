@@ -3,13 +3,17 @@ const app = require('../src/app');
 
 describe('Event Requests Routes', () => {
   it('GET /api/event-requests - debería devolver todas las event requests', async () => {
-    const res = await request(app).get('/api/event-requests');
+    const res = await request(app)
+      .get('/api/event-requests')
+      .set('Authorization', 'Bearer valid-jwt-token');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
 
   it('GET /api/event-requests/:id - debería devolver una event request específica', async () => {
-    const res = await request(app).get('/api/event-requests/1');
+    const res = await request(app)
+      .get('/api/event-requests/1')
+      .set('Authorization', 'Bearer valid-jwt-token');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', 1);
   });
@@ -23,10 +27,14 @@ describe('Event Requests Routes', () => {
       name: 'Evento de prueba',
       goal: 'Objetivo del evento',
       description: 'Descripción del evento',
-      date: futureDate.toISOString(),
+      day: futureDate.toISOString(),
+      module: 1,
       n_attendees: 50
     };
-    const res = await request(app).post('/api/event-requests').send(newEventRequest);
+    const res = await request(app)
+      .post('/api/event-requests')
+      .set('Authorization', 'Bearer valid-jwt-token')
+      .send(newEventRequest);
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('group_id', 1);
   });
@@ -36,13 +44,18 @@ describe('Event Requests Routes', () => {
       name: 'Evento actualizado',
       n_attendees: 75
     };
-    const res = await request(app).patch('/api/event-requests/1').send(updatedEventRequest);
+    const res = await request(app)
+      .patch('/api/event-requests/1')
+      .set('Authorization', 'Bearer valid-jwt-token')
+      .send(updatedEventRequest);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('name', 'Evento actualizado');
   });
 
   it('DELETE /api/event-requests/:id - debería eliminar una event request', async () => {
-    const res = await request(app).delete('/api/event-requests/1');
+    const res = await request(app)
+      .delete('/api/event-requests/1')
+      .set('Authorization', 'Bearer valid-jwt-token');
     expect(res.status).toBe(204);
   });
 });

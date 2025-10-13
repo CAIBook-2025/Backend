@@ -26,6 +26,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       
       const res = await request(app)
         .post('/api/groups')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(incompleteGroup);
       
       expect(res.status).toBe(400); // Bad Request por validación del controlador
@@ -39,6 +40,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       
       const res = await request(app)
         .post('/api/public-spaces')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(incompleteSpace);
       
       expect(res.status).toBe(400); // Bad Request por validación del controlador
@@ -101,6 +103,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       
       const res = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(incompleteEventRequest);
       
       expect(res.status).toBe(400); // Bad Request por validación del controlador
@@ -118,6 +121,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       
       const res = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(invalidDateEventRequest);
       
       expect(res.status).toBe(400);
