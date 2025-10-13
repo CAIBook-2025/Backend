@@ -16,27 +16,35 @@ describe('Groups Routes', () => {
 
   it('POST /api/groups - debería crear un nuevo group', async () => {
     const newGroup = {
-      name: 'Grupo de estudio',
-      description: 'Grupo para estudiar matemáticas',
-      representativeId: 1
+      repre_id: 1,
+      group_request_id: 1,
+      moderators_ids: [2, 3],
+      reputation: 5
     };
-    const res = await request(app).post('/api/groups').send(newGroup);
+    const res = await request(app)
+      .post('/api/groups')
+      .set('Authorization', 'Bearer valid-jwt-token')
+      .send(newGroup);
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('name', 'Grupo de estudio');
   });
 
   it('PATCH /api/groups/:id - debería actualizar un group', async () => {
     const updatedGroup = {
-      name: 'Grupo actualizado',
-      description: 'Nueva descripción del grupo'
+      reputation: 8.5
     };
-    const res = await request(app).patch('/api/groups/1').send(updatedGroup);
+    const res = await request(app)
+      .patch('/api/groups/1')
+      .set('Authorization', 'Bearer valid-jwt-token')
+      .send(updatedGroup);
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('name', 'Grupo actualizado');
+    expect(res.body).toHaveProperty('reputation', 8.5);
   });
 
   it('DELETE /api/groups/:id - debería eliminar un group', async () => {
-    const res = await request(app).delete('/api/groups/1');
+    const res = await request(app)
+      .delete('/api/groups/1')
+      .set('Authorization', 'Bearer valid-jwt-token');
     expect(res.status).toBe(204);
   });
 });

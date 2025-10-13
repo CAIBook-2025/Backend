@@ -36,7 +36,10 @@ jobs:
       
     # 4. Ejecutar linting con ESLint
     - name: Run ESLint
-      run: npm run lint
+      run: |
+        echo "🔍 Running ESLint validation..."
+        npm run lint
+        echo "✅ ESLint validation passed"
       
     # 5. Ejecutar tests unitarios
     - name: Run tests

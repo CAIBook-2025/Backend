@@ -73,14 +73,14 @@ router.get('/', async (req, res) => {
     const allUserIds = [...allModeratorIds, ...allRepresentativeIds];
     const users = allUserIds.length > 0 
       ? await prisma.user.findMany({
-          where: { id: { in: allUserIds } },
-          select: { 
-            id: true, 
-            first_name: true, 
-            last_name: true, 
-            email: true 
-          }
-        })
+        where: { id: { in: allUserIds } },
+        select: { 
+          id: true, 
+          first_name: true, 
+          last_name: true, 
+          email: true 
+        }
+      })
       : [];
 
     // Crear un mapa para acceso rápido O(1)
@@ -173,17 +173,17 @@ router.get('/:id', async (req, res) => {
     // Una sola query para todos los usuarios
     const users = allUserIds.length > 0
       ? await prisma.user.findMany({
-          where: { id: { in: allUserIds } },
-          select: { 
-            id: true, 
-            first_name: true, 
-            last_name: true, 
-            email: true,
-            role: true,
-            is_representative: true,
-            is_moderator: true
-          }
-        })
+        where: { id: { in: allUserIds } },
+        select: { 
+          id: true, 
+          first_name: true, 
+          last_name: true, 
+          email: true,
+          role: true,
+          is_representative: true,
+          is_moderator: true
+        }
+      })
       : [];
 
     // Separar representante y moderadores

@@ -11,12 +11,14 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
         public_space_id: 1,
         name: 'Evento al límite',
         goal: 'Probar límite de capacidad',
-        date: futureDate.toISOString(),
+        day: futureDate.toISOString(),
+        module: 1,
         n_attendees: 100 // Igual a la capacidad del mock (100)
       };
       
       const res = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(eventRequest);
       
       expect(res.status).toBe(201);
@@ -30,12 +32,14 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
         public_space_id: 1,
         name: 'Evento que excede capacidad',
         goal: 'No debería permitirse',
-        date: futureDate.toISOString(),
+        day: futureDate.toISOString(),
+        module: 1,
         n_attendees: 101 // Excede la capacidad del mock (100)
       };
       
       const res = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(eventRequest);
       
       expect(res.status).toBe(400);
@@ -54,6 +58,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
       
       const res = await request(app)
         .post('/api/public-spaces')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(spaceWithLongName);
       
       // Debería aceptarlo o rechazarlo apropiadamente
@@ -94,27 +99,32 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
   describe('Campos opcionales y valores null', () => {
     it('POST /api/groups - debería crear grupo sin descripción', async () => {
       const groupWithoutDescription = {
-        name: 'Grupo Minimalista',
-        representativeId: 1
+        repre_id: 1,
+        group_request_id: 1,
+        moderators_ids: [2, 3],
+        reputation: 5
         // Sin description (opcional)
       };
       
       const res = await request(app)
         .post('/api/groups')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(groupWithoutDescription);
       
       expect(res.status).toBe(201);
-      expect(res.body).toHaveProperty('name', 'Grupo Minimalista');
+      expect(res.body).toHaveProperty('name', 'Grupo de estudio');
     });
 
     it('POST /api/public-spaces - debería crear espacio sin capacidad definida', async () => {
       const spaceWithoutCapacity = {
-        name: 'Espacio Flexible'
+        name: 'Espacio Flexible',
+        location: 'Sala flexible'
         // Sin capacity (opcional)
       };
       
       const res = await request(app)
         .post('/api/public-spaces')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(spaceWithoutCapacity);
       
       expect(res.status).toBe(201);

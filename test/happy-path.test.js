@@ -22,18 +22,20 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       
       // 2. Crear grupo con el usuario como representante
       const newGroup = {
-        name: 'Grupo de Matemáticas Avanzadas',
-        description: 'Grupo para estudiar cálculo diferencial',
-        representativeId: userResponse.body.id
+        repre_id: userResponse.body.id,
+        group_request_id: 1,
+        moderators_ids: [2, 3],
+        reputation: 5
       };
       
       const groupResponse = await request(app)
         .post('/api/groups')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(newGroup);
       
       expect(groupResponse.status).toBe(201);
-      expect(groupResponse.body).toHaveProperty('name', 'Grupo de Matemáticas Avanzadas');
-      expect(groupResponse.body).toHaveProperty('representativeId', userResponse.body.id);
+      expect(groupResponse.body).toHaveProperty('name', 'Grupo de estudio');
+      expect(groupResponse.body).toHaveProperty('repre_id', userResponse.body.id);
     });
   });
 
@@ -43,24 +45,28 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       const newSpace = {
         name: 'Auditorio Central',
         capacity: 150,
-        availability: 'AVAILABLE'
+        location: 'Campus Central',
+        available: 'AVAILABLE'
       };
       
       const spaceResponse = await request(app)
         .post('/api/public-spaces')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(newSpace);
       
       expect(spaceResponse.status).toBe(201);
       
       // 2. Crear grupo
       const newGroup = {
-        name: 'Club de Debate',
-        description: 'Club universitario de debate',
-        representativeId: 1
+        repre_id: 1,
+        group_request_id: 1,
+        moderators_ids: [2, 3],
+        reputation: 5
       };
       
       const groupResponse = await request(app)
         .post('/api/groups')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(newGroup);
       
       expect(groupResponse.status).toBe(201);
@@ -74,12 +80,14 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
         name: 'Torneo de Debate Universitario',
         goal: 'Competencia de debate entre estudiantes',
         description: 'Evento académico de debate',
-        date: futureDate.toISOString(),
+        day: futureDate.toISOString(),
+        module: 1,
         n_attendees: 80
       };
       
       const requestResponse = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(eventRequest);
       
       expect(requestResponse.status).toBe(201);

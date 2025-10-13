@@ -156,14 +156,14 @@ router.get('/:id', checkJwt, async (req, res) => {
     
     const moderators = moderatorIds.length > 0 
       ? await prisma.user.findMany({
-          where: { id: { in: moderatorIds } },
-          select: { 
-            id: true, 
-            first_name: true, 
-            last_name: true, 
-            email: true 
-          }
-        })
+        where: { id: { in: moderatorIds } },
+        select: { 
+          id: true, 
+          first_name: true, 
+          last_name: true, 
+          email: true 
+        }
+      })
       : [];
 
     // Obtener representante
@@ -387,11 +387,12 @@ router.patch('/:id', checkJwt, async (req, res) => {
     });
 
     // Verificar permisos
-    const moderatorIds = Array.isArray(existingRequest.group.moderators_ids) 
-      ? existingRequest.group.moderators_ids 
-      : [];
-    const isRepresentative = user.id === existingRequest.group.repre_id;
-    const isModerator = moderatorIds.includes(user.id);
+    //const moderatorIds = Array.isArray(existingRequest.group.moderators_ids) 
+    //? existingRequest.group.moderators_ids 
+    //: [];
+    // Desactivamos hasta que se ocupen para errores de lint
+    //const isRepresentative = user.id === existingRequest.group.repre_id;
+    //const isModerator = moderatorIds.includes(user.id);
     const isAdmin = user.role === 'ADMIN';
 
     const { status } = req.body;
