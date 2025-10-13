@@ -2,7 +2,7 @@ const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
 
 const router = Router();
-const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
+// const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
 
 // GET /schedules?srId=&date=YYYY-MM-DD&page=&take=
 router.get('/', async (req, res) => {
@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
 
     const where = {};
 
-    const date = new Date(`${String(req.query.day)}T00:00:00.000Z`)
+    const date = new Date(`${String(req.query.day)}T00:00:00.000Z`);
     console.log(date);
 
     if (req.query.day) {
@@ -73,24 +73,18 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'srId, day, module son requeridos' });
     }
 
-    let availability;
-    if (!req.body.available) {
-      availability = 'AVAILABLE';
-    } else {
-      availability = req.body.available;
-    }
+    // const availability = req.body.available || 'AVAILABLE';
 
-    // Chequeo de solape en la misma sala
-    const existing = await prisma.sRScheduling.findMany({
+    // Chequeo de horario duplicado en la misma sala
+    const existing = await prisma.sRScheduling.findFirst({
       where: {
         sr_id: srId,
         day,
         module
-      },
-      select: { id: true, module }
+      }
     });
-    if (existing.some(r => overlaps(start, end, r.startsAt, r.endsAt))) {
-      return res.status(409).json({ error: 'Solape con otro horario en la sala' });
+    if (existing) {
+      return res.status(409).json({ error: 'Ya existe un horario para esta sala, día y módulo' });
     }
 
     const created = await prisma.sRScheduling.create({

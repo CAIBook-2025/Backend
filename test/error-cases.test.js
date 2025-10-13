@@ -3,14 +3,14 @@ const app = require('../src/app');
 
 describe('Error Cases Tests - Casos que deben fallar', () => {
   describe('Validación de campos requeridos', () => {
-    it('POST /users - debería pasar porque los mocks no validan campos', async () => {
+    it('POST /api/users - debería pasar porque los mocks no validan campos', async () => {
       const incompleteUser = {
         email: 'test@example.com'
         // Faltan: hashed_password, first_name, last_name
       };
       
       const res = await request(app)
-        .post('/users')
+        .post('/api/users')
         .set('Authorization', 'Bearer valid-jwt-token')
         .send(incompleteUser);
       
@@ -26,6 +26,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       
       const res = await request(app)
         .post('/api/groups')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(incompleteGroup);
       
       expect(res.status).toBe(400); // Bad Request por validación del controlador
@@ -39,6 +40,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       
       const res = await request(app)
         .post('/api/public-spaces')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(incompleteSpace);
       
       expect(res.status).toBe(400); // Bad Request por validación del controlador
@@ -47,8 +49,8 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
   });
 
   describe('IDs inválidos y validación de parámetros', () => {
-    it('GET /users/:id - debería devolver 400 para ID inválido', async () => {
-      const res = await request(app).get('/users/invalid-id');
+    it('GET /api/users/:id - debería devolver 400 para ID inválido', async () => {
+      const res = await request(app).get('/api/users/invalid-id');
       expect(res.status).toBe(400); // Bad Request por ID inválido
       expect(res.body).toHaveProperty('error');
     });
@@ -59,10 +61,10 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       expect(res.body).toHaveProperty('error');
     });
 
-    it('PATCH /study-rooms/:id - debería devolver 400 para ID cero', async () => {
+    it('PATCH /api/sRooms/:id - debería devolver 400 para ID cero', async () => {
       const updateData = { name: 'Updated Room' };
       const res = await request(app)
-        .patch('/study-rooms/0')
+        .patch('/api/sRooms/0')
         .send(updateData);
       
       expect(res.status).toBe(400); // Bad Request por ID 0
@@ -77,15 +79,15 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       expect(res.body).toHaveProperty('error');
     });
 
-    it('DELETE /strikes/:id - debería devolver 204 con mocks', async () => {
-      const res = await request(app).delete('/strikes/999999');
+    it('DELETE /api/strikes/:id - debería devolver 204 con mocks', async () => {
+      const res = await request(app).delete('/api/strikes/999999');
       expect(res.status).toBe(204); // Los mocks siempre permiten delete
     });
 
-    it('PATCH /attendance/:id - debería devolver 200 con mocks', async () => {
+    it('PATCH /api/attendance/:id - debería devolver 200 con mocks', async () => {
       const updateData = { rating: 4 };
       const res = await request(app)
-        .patch('/attendance/999999')
+        .patch('/api/attendance/999999')
         .send(updateData);
       
       expect(res.status).toBe(200); // Los mocks devuelven datos incluso para IDs inexistentes
@@ -101,6 +103,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       
       const res = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(incompleteEventRequest);
       
       expect(res.status).toBe(400); // Bad Request por validación del controlador
@@ -118,20 +121,21 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       
       const res = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(invalidDateEventRequest);
       
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
     });
 
-    it('POST /schedules - debería fallar por validación del controlador', async () => {
+    it('POST /api/srSchedule - debería fallar por validación del controlador', async () => {
       const incompleteSchedule = {
         startsAt: new Date().toISOString()
         // Faltan: userId, srId, endsAt
       };
       
       const res = await request(app)
-        .post('/schedules')
+        .post('/api/srSchedule')
         .send(incompleteSchedule);
       
       expect(res.status).toBe(400); // Bad Request por validación del controlador
@@ -140,12 +144,12 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
   });
 
   describe('Autenticación fallida', () => {
-    it('GET /users/profile - debería devolver 401 sin token', async () => {
-      const res = await request(app).get('/users/profile');
+    it('GET /api/users/profile - debería devolver 401 sin token', async () => {
+      const res = await request(app).get('/api/users/profile');
       expect(res.status).toBe(401);
     });
 
-    it('POST /users - debería devolver 401 con token inválido', async () => {
+    it('POST /api/users - debería devolver 401 con token inválido', async () => {
       const newUser = {
         first_name: 'Test',
         last_name: 'User',
@@ -154,7 +158,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       };
       
       const res = await request(app)
-        .post('/users')
+        .post('/api/users')
         .send(newUser); // Sin header Authorization
       
       expect(res.status).toBe(401);

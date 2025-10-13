@@ -8,10 +8,9 @@
     "start": "node src/server.js",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "lint": "eslint src test --ext .js",
-    "lint:fix": "eslint src test --ext .js --fix",
-    "format": "prettier --write src test",
-    "format:check": "prettier --check src test"
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -38,12 +37,19 @@
     "passport-jwt": "^4.0.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.37.0",
     "eslint": "^9.37.0",
-    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.4.0",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
+    "lint-staged": "^16.2.4",
     "nodemon": "^3.1.10",
-    "prettier": "^3.6.2",
     "prisma": "^6.16.2",
     "supertest": "^7.1.4"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
   }
 }
