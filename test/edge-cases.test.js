@@ -11,12 +11,14 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
         public_space_id: 1,
         name: 'Evento al límite',
         goal: 'Probar límite de capacidad',
-        date: futureDate.toISOString(),
+        day: futureDate.toISOString(),
+        module: 1,
         n_attendees: 100 // Igual a la capacidad del mock (100)
       };
       
       const res = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(eventRequest);
       
       expect(res.status).toBe(201);
@@ -30,12 +32,14 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
         public_space_id: 1,
         name: 'Evento que excede capacidad',
         goal: 'No debería permitirse',
-        date: futureDate.toISOString(),
+        day: futureDate.toISOString(),
+        module: 1,
         n_attendees: 101 // Excede la capacidad del mock (100)
       };
       
       const res = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(eventRequest);
       
       expect(res.status).toBe(400);
@@ -54,83 +58,87 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
       
       const res = await request(app)
         .post('/api/public-spaces')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(spaceWithLongName);
       
       // Debería aceptarlo o rechazarlo apropiadamente
       expect([201, 400]).toContain(res.status);
     });
 
-    it('POST /study-rooms - debería manejar capacidad cero', async () => {
+    it('POST /api/sRooms - debería manejar capacidad cero', async () => {
       const roomWithZeroCapacity = {
-        name: 'Sala sin capacidad',
-        capacity: 0
+        name: 'Sala Especial',
+        capacity: 0,
+        location: 'Sótano'
       };
       
       const res = await request(app)
-        .post('/study-rooms')
+        .post('/api/sRooms')
         .send(roomWithZeroCapacity);
       
       expect(res.status).toBe(201); // Debería permitir capacidad 0
       expect(res.body).toHaveProperty('capacity', 0);
     });
 
-    it('POST /schedules - debería manejar reservas de 1 minuto', async () => {
-      const start = new Date(Date.now() + 60 * 60 * 1000); // En 1 hora
-      const end = new Date(start.getTime() + 60 * 1000); // 1 minuto después
-      
+    it('POST /api/srSchedule - debería manejar módulos cortos', async () => {
       const shortSchedule = {
-        userId: 1,
-        srId: 1,
-        startsAt: start.toISOString(),
-        endsAt: end.toISOString()
+        srId: 2,
+        day: '2024-12-02T00:00:00.000Z',
+        module: '07:00-07:30', // Módulo de 30 minutos
+        available: 'AVAILABLE'
       };
       
       const res = await request(app)
-        .post('/schedules')
+        .post('/api/srSchedule')
         .send(shortSchedule);
       
-      expect(res.status).toBe(201); // Debería permitir reservas cortas
+      expect(res.status).toBe(201); // Debería permitir módulos cortos
     });
   });
 
   describe('Campos opcionales y valores null', () => {
     it('POST /api/groups - debería crear grupo sin descripción', async () => {
       const groupWithoutDescription = {
-        name: 'Grupo Minimalista',
-        representativeId: 1
+        repre_id: 1,
+        group_request_id: 1,
+        moderators_ids: [2, 3],
+        reputation: 5
         // Sin description (opcional)
       };
       
       const res = await request(app)
         .post('/api/groups')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(groupWithoutDescription);
       
       expect(res.status).toBe(201);
-      expect(res.body).toHaveProperty('name', 'Grupo Minimalista');
+      expect(res.body).toHaveProperty('name', 'Grupo de estudio');
     });
 
     it('POST /api/public-spaces - debería crear espacio sin capacidad definida', async () => {
       const spaceWithoutCapacity = {
-        name: 'Espacio Flexible'
+        name: 'Espacio Flexible',
+        location: 'Sala flexible'
         // Sin capacity (opcional)
       };
       
       const res = await request(app)
         .post('/api/public-spaces')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(spaceWithoutCapacity);
       
       expect(res.status).toBe(201);
       expect(res.body).toHaveProperty('name', 'Espacio Flexible');
     });
 
-    it('PATCH /users/:id - debería actualizar solo campos específicos', async () => {
+    it('PATCH /api/users/:id - debería actualizar solo campos específicos', async () => {
       const partialUpdate = {
         first_name: 'NuevoNombre'
-        // Solo actualiza first_name, otros campos quedan igual
+        // No incluir otros campos
       };
       
       const res = await request(app)
-        .patch('/users/1')
+        .patch('/api/users/1')
         .send(partialUpdate);
       
       expect(res.status).toBe(200);
@@ -144,11 +152,11 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
       const strikeId = 1;
       
       // Eliminar el strike
-      await request(app).delete(`/strikes/${strikeId}`);
+      await request(app).delete(`/api/strikes/${strikeId}`);
       
       // Intentar obtener el strike eliminado - los mocks devuelven datos
       const getRes = await request(app)
-        .get(`/strikes/${strikeId}`);
+        .get(`/api/strikes/${strikeId}`);
       
       expect(getRes.status).toBe(200); // Los mocks no simulan eliminación real
       expect(getRes.body).toHaveProperty('id');
@@ -157,7 +165,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
     it('PATCH sobre recurso con ID muy alto - mocks devuelven datos', async () => {
       const updateData = { name: 'Updated Room Name' };
       const res = await request(app)
-        .patch('/study-rooms/999999') // ID que no existe
+        .patch('/api/sRooms/999999') // ID que no existe
         .send(updateData);
       
       expect(res.status).toBe(200); // Los mocks devuelven datos incluso para IDs altos

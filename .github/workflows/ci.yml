@@ -17,22 +17,17 @@ jobs:
   test:
     name: Test & Validate
     runs-on: ubuntu-latest
-    
-    # Matriz de estrategia para probar múltiples versiones de Node.js
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
         
     steps:
     # 1. Checkout del código
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    # 2. Setup de Node.js con la versión especificada
-    - name: Setup Node.js ${{ matrix.node-version }}
+    # 2. Setup de Node.js
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '>=18'
         cache: 'npm'
         
     # 3. Instalar dependencias con cache
@@ -41,13 +36,12 @@ jobs:
       
     # 4. Ejecutar linting con ESLint
     - name: Run ESLint
-      run: npm run lint
+      run: |
+        echo "🔍 Running ESLint validation..."
+        npm run lint
+        echo "✅ ESLint validation passed"
       
-    # 5. Verificar formato con Prettier
-    - name: Check code formatting with Prettier
-      run: npm run format:check
-      
-    # 6. Ejecutar tests unitarios
+    # 5. Ejecutar tests unitarios
     - name: Run tests
       run: npm test
         

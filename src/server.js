@@ -9,7 +9,7 @@ const server = app.listen(PORT, () => {
 
 async function shutdown() {
   console.log('\nShutting down...');
-  try { await prisma.$disconnect(); } catch {}
+  try { await prisma.$disconnect(); } catch (error) { console.log('Error disconnecting:', error); }
   server.close(() => process.exit(0));
 }
 process.on('SIGINT', shutdown);

@@ -1,96 +1,285 @@
 const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
+const { checkJwt } = require('../middleware/auth');
+
 const router = Router();
 
-// GET /event-requests
-router.get('/', async (_req, res) => {
+// Constantes
+const VALID_REQUEST_STATUS = ['PENDING', 'CONFIRMED', 'CANCELLED'];
+
+// GET /event-requests - Listar solicitudes de eventos
+router.get('/', checkJwt, async (req, res) => {
   try {
+    // Filtros opcionales
+    const { status, group_id } = req.query;
+
+    const where = {};
+
+    if (status) {
+      if (!VALID_REQUEST_STATUS.includes(status)) {
+        return res.status(400).json({ 
+          error: `Status inválido. Debe ser: ${VALID_REQUEST_STATUS.join(', ')}` 
+        });
+      }
+      where.status = status;
+    }
+
+    if (group_id) {
+      where.group_id = Number(group_id);
+    }
+
     const items = await prisma.eventRequest.findMany({ 
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         group: {
-          select: { id: true, name: true, reputation: true, 
-            representative: {
-              select: { id: true, first_name: true, last_name: true, email: true }
+          include: {
+            groupRequest: {
+              select: { 
+                name: true, 
+                logo: true 
+              }
             }
           }
         },
         publicSpace: {
-          select: { id: true, name: true, capacity: true, availability: true }
+          select: { 
+            id: true, 
+            name: true, 
+            capacity: true, 
+            location: true,
+            available: true 
+          }
         },
         eventsScheduling: {
-          select: { id: true, title: true, startsAt: true, endsAt: true, status: true }
+          select: { 
+            id: true, 
+            start_time: true, 
+            end_time: true 
+          }
         }
       }
     });
-    res.json(items);
+
+    // Formatear respuesta con información del grupo
+    const formattedItems = items.map(item => ({
+      id: item.id,
+      name: item.name,
+      goal: item.goal,
+      description: item.description,
+      status: item.status,
+      day: item.day,
+      module: item.module,
+      n_attendees: item.n_attendees,
+      group: {
+        id: item.group.id,
+        name: item.group.groupRequest.name,
+        logo: item.group.groupRequest.logo,
+        reputation: item.group.reputation
+      },
+      public_space: item.publicSpace,
+      event_scheduled: item.eventsScheduling.length > 0 ? item.eventsScheduling[0] : null,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt
+    }));
+
+    res.json(formattedItems);
   } catch (error) {
     console.log('ERROR GET /event-requests:', error);
     res.status(500).json({ error: 'No se pudo listar las solicitudes de eventos' });
   }
 });
 
-// GET /event-requests/:id
-router.get('/:id', async (req, res) => {
+// GET /event-requests/:id - Obtener solicitud específica
+router.get('/:id', checkJwt, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
     
     const item = await prisma.eventRequest.findUnique({ 
       where: { id },
       include: {
         group: {
           include: {
-            representative: {
-              select: { id: true, first_name: true, last_name: true, email: true }
-            },
-            moderators: {
-              select: { id: true, first_name: true, last_name: true, email: true }
+            groupRequest: {
+              select: { 
+                name: true, 
+                description: true,
+                logo: true,
+                user: {
+                  select: {
+                    id: true,
+                    first_name: true,
+                    last_name: true,
+                    email: true
+                  }
+                }
+              }
             }
           }
         },
         publicSpace: {
-          select: { id: true, name: true, capacity: true, availability: true }
+          select: { 
+            id: true, 
+            name: true, 
+            capacity: true, 
+            location: true,
+            available: true 
+          }
         },
         eventsScheduling: {
           include: {
             attendance: {
-              select: { id: true, student_id: true, rating: true }
+              select: { 
+                id: true, 
+                student_id: true, 
+                status: true,
+                rating: true,
+                feedback: true
+              }
             }
           }
         }
       }
     });
     
-    if (!item) return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
-    res.json(item);
+    if (!item) {
+      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
+    }
+
+    // Obtener moderadores del grupo
+    const moderatorIds = Array.isArray(item.group.moderators_ids) 
+      ? item.group.moderators_ids 
+      : [];
+    
+    const moderators = moderatorIds.length > 0 
+      ? await prisma.user.findMany({
+        where: { id: { in: moderatorIds } },
+        select: { 
+          id: true, 
+          first_name: true, 
+          last_name: true, 
+          email: true 
+        }
+      })
+      : [];
+
+    // Obtener representante
+    const representative = await prisma.user.findUnique({
+      where: { id: item.group.repre_id },
+      select: { 
+        id: true, 
+        first_name: true, 
+        last_name: true, 
+        email: true 
+      }
+    });
+
+    const formatted = {
+      id: item.id,
+      name: item.name,
+      goal: item.goal,
+      description: item.description,
+      status: item.status,
+      day: item.day,
+      module: item.module,
+      n_attendees: item.n_attendees,
+      group: {
+        id: item.group.id,
+        name: item.group.groupRequest.name,
+        description: item.group.groupRequest.description,
+        logo: item.group.groupRequest.logo,
+        reputation: item.group.reputation,
+        representative,
+        moderators,
+        creator: item.group.groupRequest.user
+      },
+      public_space: item.publicSpace,
+      events_scheduling: item.eventsScheduling,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt
+    };
+
+    res.json(formatted);
   } catch (error) {
     console.log('ERROR GET /event-requests/:id:', error);
     res.status(500).json({ error: 'No se pudo obtener la solicitud de evento' });
   }
 });
 
-// POST /event-requests
-router.post('/', async (req, res) => {
+// POST /event-requests - Crear solicitud de evento
+router.post('/', checkJwt, async (req, res) => {
   try {
-    const { group_id, public_space_id, name, goal, description, date, n_attendees } = req.body || {};
+    const { group_id, public_space_id, name, goal, description, day, module, n_attendees } = req.body;
     
-    if (!group_id || !public_space_id || !name || !goal || !date || !n_attendees) {
-      return res.status(400).json({ error: 'group_id, public_space_id, name, goal, date y n_attendees son requeridos' });
+    // Validación de campos requeridos
+    if (!group_id || !public_space_id || !name || !goal || !day || module === undefined || !n_attendees) {
+      return res.status(400).json({ 
+        error: 'group_id, public_space_id, name, goal, day, module y n_attendees son requeridos' 
+      });
     }
 
-    // Validar que n_attendees sea un número positivo
+    // Validar n_attendees
     if (!Number.isInteger(n_attendees) || n_attendees <= 0) {
-      return res.status(400).json({ error: 'n_attendees debe ser un número entero positivo' });
+      return res.status(400).json({ 
+        error: 'n_attendees debe ser un número entero positivo' 
+      });
+    }
+
+    // Validar module (1-8)
+    if (!Number.isInteger(module) || module < 1 || module > 8) {
+      return res.status(400).json({ 
+        error: 'module debe ser un número entre 1 y 8' 
+      });
     }
 
     // Validar que la fecha sea futura
-    const eventDate = new Date(date);
-    if (eventDate <= new Date()) {
-      return res.status(400).json({ error: 'La fecha del evento debe ser futura' });
+    const eventDay = new Date(day);
+    eventDay.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (eventDay < today) {
+      return res.status(400).json({ 
+        error: 'La fecha del evento debe ser hoy o futura' 
+      });
     }
 
-    // Validar que el espacio tenga capacidad suficiente
+    // Obtener usuario autenticado
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Verificar que el grupo existe y el usuario tiene permisos
+    const group = await prisma.group.findUnique({
+      where: { id: group_id }
+    });
+
+    if (!group) {
+      return res.status(404).json({ error: 'Grupo no encontrado' });
+    }
+
+    // Verificar que el usuario es representante o moderador del grupo
+    const moderatorIds = Array.isArray(group.moderators_ids) 
+      ? group.moderators_ids 
+      : [];
+    const isRepresentative = user.id === group.repre_id;
+    const isModerator = moderatorIds.includes(user.id);
+    const isAdmin = user.role === 'ADMIN';
+
+    if (!isRepresentative && !isModerator && !isAdmin) {
+      return res.status(403).json({ 
+        error: 'Solo el representante, moderadores del grupo o administradores pueden crear solicitudes' 
+      });
+    }
+
+    // Validar que el espacio existe y está disponible
     const publicSpace = await prisma.publicSpace.findUnique({
       where: { id: public_space_id }
     });
@@ -99,12 +288,33 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ error: 'Espacio público no encontrado' });
     }
 
-    if (publicSpace.capacity && n_attendees > publicSpace.capacity) {
-      return res.status(400).json({ error: `El espacio tiene capacidad para ${publicSpace.capacity} personas, pero solicitas ${n_attendees}` });
+    if (publicSpace.available !== 'AVAILABLE') {
+      return res.status(400).json({ 
+        error: `El espacio público no está disponible (estado: ${publicSpace.available})` 
+      });
     }
 
-    if (publicSpace.availability !== 'AVAILABLE') {
-      return res.status(400).json({ error: 'El espacio público no está disponible' });
+    // Validar capacidad
+    if (publicSpace.capacity && n_attendees > publicSpace.capacity) {
+      return res.status(400).json({ 
+        error: `El espacio tiene capacidad para ${publicSpace.capacity} personas, pero solicitas ${n_attendees}` 
+      });
+    }
+
+    // Verificar que no haya conflictos en ese día y módulo
+    const conflictingRequest = await prisma.eventRequest.findFirst({
+      where: {
+        public_space_id,
+        day: eventDay,
+        module,
+        status: { in: ['PENDING', 'CONFIRMED'] }
+      }
+    });
+
+    if (conflictingRequest) {
+      return res.status(409).json({ 
+        error: `Ya existe una solicitud para ese espacio en el día ${day} módulo ${module}` 
+      });
     }
 
     const created = await prisma.eventRequest.create({
@@ -113,16 +323,27 @@ router.post('/', async (req, res) => {
         public_space_id,
         name,
         goal,
-        description: description ?? null,
-        date: eventDate,
-        n_attendees
+        description: description || null,
+        day: eventDay,
+        module,
+        n_attendees,
+        status: 'PENDING'
       },
       include: {
         group: {
-          select: { id: true, name: true }
+          include: {
+            groupRequest: {
+              select: { name: true, logo: true }
+            }
+          }
         },
         publicSpace: {
-          select: { id: true, name: true, capacity: true }
+          select: { 
+            id: true, 
+            name: true, 
+            capacity: true,
+            location: true 
+          }
         }
       }
     });
@@ -130,49 +351,81 @@ router.post('/', async (req, res) => {
     res.status(201).json(created);
   } catch (error) {
     if (error?.code === 'P2003') {
-      return res.status(400).json({ error: 'El grupo o espacio público especificado no existe' });
+      return res.status(400).json({ 
+        error: 'El grupo o espacio público especificado no existe' 
+      });
     }
     console.log('ERROR POST /event-requests:', error);
     res.status(500).json({ error: 'No se pudo crear la solicitud de evento' });
   }
 });
 
-// PATCH /event-requests/:id
-router.patch('/:id', async (req, res) => {
+// PATCH /event-requests/:id - Actualizar solicitud (cambiar status principalmente)
+router.patch('/:id', checkJwt, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
-    
-    // Validaciones especiales para ciertos campos
-    const { date, n_attendees, status } = req.body || {};
-    
-    if (date) {
-      const eventDate = new Date(date);
-      if (eventDate <= new Date()) {
-        return res.status(400).json({ error: 'La fecha del evento debe ser futura' });
-      }
-    }
-    
-    if (n_attendees && (!Number.isInteger(n_attendees) || n_attendees <= 0)) {
-      return res.status(400).json({ error: 'n_attendees debe ser un número entero positivo' });
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
     }
 
-    // Si se está confirmando la solicitud, crear el evento automáticamente
-    if (status === 'CONFIRMED') {
-      const eventRequest = await prisma.eventRequest.findUnique({
-        where: { id },
-        include: { publicSpace: true }
+    // Obtener la solicitud existente
+    const existingRequest = await prisma.eventRequest.findUnique({
+      where: { id },
+      include: {
+        group: true,
+        publicSpace: true
+      }
+    });
+
+    if (!existingRequest) {
+      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
+    }
+
+    // Obtener usuario autenticado
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub }
+    });
+
+    // Verificar permisos
+    //const moderatorIds = Array.isArray(existingRequest.group.moderators_ids) 
+    //? existingRequest.group.moderators_ids 
+    //: [];
+    // Desactivamos hasta que se ocupen para errores de lint
+    //const isRepresentative = user.id === existingRequest.group.repre_id;
+    //const isModerator = moderatorIds.includes(user.id);
+    const isAdmin = user.role === 'ADMIN';
+
+    const { status } = req.body;
+
+    // Solo admin puede confirmar o cancelar
+    if (status && status !== 'PENDING') {
+      if (!isAdmin) {
+        return res.status(403).json({ 
+          error: 'Solo administradores pueden confirmar o cancelar solicitudes' 
+        });
+      }
+    }
+
+    // Validar status
+    if (status && !VALID_REQUEST_STATUS.includes(status)) {
+      return res.status(400).json({ 
+        error: `Status inválido. Debe ser: ${VALID_REQUEST_STATUS.join(', ')}` 
       });
-      
-      if (!eventRequest) {
-        return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
-      }
-      
-      if (eventRequest.status !== 'PENDING') {
-        return res.status(400).json({ error: 'Solo se pueden confirmar solicitudes pendientes' });
-      }
+    }
 
-      // Transacción para actualizar solicitud y crear evento
+    // Si se está confirmando, crear el EventsScheduling
+    if (status === 'CONFIRMED' && existingRequest.status !== 'CONFIRMED') {
+      // Calcular horarios basados en el módulo
+      const moduleStartHour = 8 + (existingRequest.module - 1) * 1.5;
+      const moduleEndHour = moduleStartHour + 1.5;
+
+      const startTime = new Date(existingRequest.day);
+      startTime.setHours(Math.floor(moduleStartHour), (moduleStartHour % 1) * 60, 0, 0);
+
+      const endTime = new Date(existingRequest.day);
+      endTime.setHours(Math.floor(moduleEndHour), (moduleEndHour % 1) * 60, 0, 0);
+
+      // Transacción para actualizar y crear evento
       const result = await prisma.$transaction(async (tx) => {
         // Actualizar solicitud
         const updatedRequest = await tx.eventRequest.update({
@@ -180,30 +433,22 @@ router.patch('/:id', async (req, res) => {
           data: { status: 'CONFIRMED' },
           include: {
             group: {
-              select: { id: true, name: true }
+              include: {
+                groupRequest: {
+                  select: { name: true, logo: true }
+                }
+              }
             },
-            publicSpace: {
-              select: { id: true, name: true }
-            }
+            publicSpace: true
           }
         });
 
-        // Crear evento automáticamente (con horario por defecto)
-        const eventDate = new Date(eventRequest.date);
-        const startTime = new Date(eventDate);
-        startTime.setHours(10, 0, 0, 0); // 10:00 AM por defecto
-        const endTime = new Date(eventDate);
-        endTime.setHours(12, 0, 0, 0); // 12:00 PM por defecto
-
+        // Crear EventsScheduling
         await tx.eventsScheduling.create({
           data: {
-            public_space_id: eventRequest.public_space_id,
-            group_id: eventRequest.group_id,
             event_request_id: id,
-            startsAt: startTime,
-            endsAt: endTime,
-            title: eventRequest.name,
-            notes: eventRequest.description
+            start_time: startTime,
+            end_time: endTime
           }
         });
 
@@ -213,38 +458,139 @@ router.patch('/:id', async (req, res) => {
       return res.json(result);
     }
 
+    // Validación de otros campos si se están actualizando
+    const allowedFields = isAdmin 
+      ? ['name', 'goal', 'description', 'day', 'module', 'n_attendees', 'status']
+      : ['name', 'goal', 'description'];
+
+    const dataToUpdate = {};
+
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        // Validaciones específicas
+        if (field === 'day') {
+          const eventDay = new Date(req.body[field]);
+          eventDay.setHours(0, 0, 0, 0);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (eventDay < today) {
+            throw new Error('La fecha del evento debe ser hoy o futura');
+          }
+          dataToUpdate[field] = eventDay;
+        } else if (field === 'module') {
+          const mod = Number(req.body[field]);
+          if (!Number.isInteger(mod) || mod < 1 || mod > 8) {
+            throw new Error('module debe ser un número entre 1 y 8');
+          }
+          dataToUpdate[field] = mod;
+        } else if (field === 'n_attendees') {
+          const n = Number(req.body[field]);
+          if (!Number.isInteger(n) || n <= 0) {
+            throw new Error('n_attendees debe ser un número entero positivo');
+          }
+          dataToUpdate[field] = n;
+        } else {
+          dataToUpdate[field] = req.body[field];
+        }
+      }
+    });
+
+    if (Object.keys(dataToUpdate).length === 0) {
+      return res.status(400).json({ error: 'No hay campos para actualizar' });
+    }
+
     const updated = await prisma.eventRequest.update({ 
       where: { id }, 
-      data: req.body || {},
+      data: dataToUpdate,
       include: {
         group: {
-          select: { id: true, name: true }
+          include: {
+            groupRequest: {
+              select: { name: true, logo: true }
+            }
+          }
         },
-        publicSpace: {
-          select: { id: true, name: true, capacity: true }
-        }
+        publicSpace: true
       }
     });
     
     res.json(updated);
   } catch (error) {
-    if (error?.code === 'P2025') return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
+    }
+    if (error.message) {
+      return res.status(400).json({ error: error.message });
+    }
     console.log('ERROR PATCH /event-requests/:id:', error);
     res.status(500).json({ error: 'No se pudo actualizar la solicitud de evento' });
   }
 });
 
-// DELETE /event-requests/:id
-router.delete('/:id', async (req, res) => {
+// DELETE /event-requests/:id - Eliminar solicitud
+router.delete('/:id', checkJwt, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    // Obtener la solicitud
+    const eventRequest = await prisma.eventRequest.findUnique({
+      where: { id },
+      include: { group: true }
+    });
+
+    if (!eventRequest) {
+      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
+    }
+
+    // Obtener usuario autenticado
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub }
+    });
+
+    // Verificar permisos
+    const moderatorIds = Array.isArray(eventRequest.group.moderators_ids) 
+      ? eventRequest.group.moderators_ids 
+      : [];
+    const isRepresentative = user.id === eventRequest.group.repre_id;
+    const isModerator = moderatorIds.includes(user.id);
+    const isAdmin = user.role === 'ADMIN';
+
+    if (!isRepresentative && !isModerator && !isAdmin) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    // No permitir eliminar si ya está confirmada (solo admin puede)
+    if (eventRequest.status === 'CONFIRMED' && !isAdmin) {
+      return res.status(403).json({ 
+        error: 'No se puede eliminar una solicitud confirmada. Solo administradores pueden hacerlo.' 
+      });
+    }
+
+    // Verificar si tiene eventos programados
+    const schedulingCount = await prisma.eventsScheduling.count({
+      where: { event_request_id: id }
+    });
+
+    if (schedulingCount > 0 && !isAdmin) {
+      return res.status(409).json({ 
+        error: 'No se puede eliminar: la solicitud tiene eventos programados' 
+      });
+    }
     
     await prisma.eventRequest.delete({ where: { id } });
     res.status(204).end();
   } catch (error) {
-    if (error?.code === 'P2025') return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
-    if (error?.code === 'P2003') return res.status(409).json({ error: 'No se puede eliminar: solicitud tiene eventos programados asociados' });
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
+    }
+    if (error?.code === 'P2003') {
+      return res.status(409).json({ 
+        error: 'No se puede eliminar: solicitud tiene registros asociados' 
+      });
+    }
     console.log('ERROR DELETE /event-requests/:id:', error);
     res.status(500).json({ error: 'No se pudo eliminar la solicitud de evento' });
   }

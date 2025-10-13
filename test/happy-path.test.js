@@ -13,7 +13,7 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       };
       
       const userResponse = await request(app)
-        .post('/users')
+        .post('/api/users')
         .set('Authorization', 'Bearer valid-jwt-token')
         .send(newUser);
       
@@ -22,18 +22,20 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       
       // 2. Crear grupo con el usuario como representante
       const newGroup = {
-        name: 'Grupo de Matemáticas Avanzadas',
-        description: 'Grupo para estudiar cálculo diferencial',
-        representativeId: userResponse.body.id
+        repre_id: userResponse.body.id,
+        group_request_id: 1,
+        moderators_ids: [2, 3],
+        reputation: 5
       };
       
       const groupResponse = await request(app)
         .post('/api/groups')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(newGroup);
       
       expect(groupResponse.status).toBe(201);
-      expect(groupResponse.body).toHaveProperty('name', 'Grupo de Matemáticas Avanzadas');
-      expect(groupResponse.body).toHaveProperty('representativeId', userResponse.body.id);
+      expect(groupResponse.body).toHaveProperty('name', 'Grupo de estudio');
+      expect(groupResponse.body).toHaveProperty('repre_id', userResponse.body.id);
     });
   });
 
@@ -43,24 +45,28 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       const newSpace = {
         name: 'Auditorio Central',
         capacity: 150,
-        availability: 'AVAILABLE'
+        location: 'Campus Central',
+        available: 'AVAILABLE'
       };
       
       const spaceResponse = await request(app)
         .post('/api/public-spaces')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(newSpace);
       
       expect(spaceResponse.status).toBe(201);
       
       // 2. Crear grupo
       const newGroup = {
-        name: 'Club de Debate',
-        description: 'Club universitario de debate',
-        representativeId: 1
+        repre_id: 1,
+        group_request_id: 1,
+        moderators_ids: [2, 3],
+        reputation: 5
       };
       
       const groupResponse = await request(app)
         .post('/api/groups')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(newGroup);
       
       expect(groupResponse.status).toBe(201);
@@ -74,12 +80,14 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
         name: 'Torneo de Debate Universitario',
         goal: 'Competencia de debate entre estudiantes',
         description: 'Evento académico de debate',
-        date: futureDate.toISOString(),
+        day: futureDate.toISOString(),
+        module: 1,
         n_attendees: 80
       };
       
       const requestResponse = await request(app)
         .post('/api/event-requests')
+        .set('Authorization', 'Bearer valid-jwt-token')
         .send(eventRequest);
       
       expect(requestResponse.status).toBe(201);
@@ -97,28 +105,27 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       };
       
       const roomResponse = await request(app)
-        .post('/study-rooms')
+        .post('/api/sRooms')
         .send(newRoom);
       
       expect(roomResponse.status).toBe(201);
       
       // 2. Hacer reserva de horario
-      const futureStart = new Date(Date.now() + 2 * 60 * 60 * 1000); // En 2 horas
-      const futureEnd = new Date(futureStart.getTime() + 2 * 60 * 60 * 1000); // 2 horas después
+      const futureDay = new Date(Date.now() + 24 * 60 * 60 * 1000); // Mañana
       
       const schedule = {
-        userId: 1,
         srId: roomResponse.body.id,
-        startsAt: futureStart.toISOString(),
-        endsAt: futureEnd.toISOString()
+        day: futureDay.toISOString().split('T')[0] + 'T00:00:00.000Z',
+        module: '09:00-11:00',
+        available: 'OCCUPIED'
       };
       
       const scheduleResponse = await request(app)
-        .post('/schedules')
+        .post('/api/srSchedule')
         .send(schedule);
       
       expect(scheduleResponse.status).toBe(201);
-      expect(scheduleResponse.body).toHaveProperty('userId', 1);
+      expect(scheduleResponse.body).toHaveProperty('sr_id', roomResponse.body.id);
     });
   });
 });

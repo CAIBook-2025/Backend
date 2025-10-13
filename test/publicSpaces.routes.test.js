@@ -18,9 +18,13 @@ describe('Public Spaces Routes', () => {
     const newPublicSpace = {
       name: 'Auditorio Principal',
       capacity: 200,
-      availability: 'AVAILABLE'
+      location: 'Edificio A, Piso 1',
+      available: 'AVAILABLE'
     };
-    const res = await request(app).post('/api/public-spaces').send(newPublicSpace);
+    const res = await request(app)
+      .post('/api/public-spaces')
+      .set('Authorization', 'Bearer valid-jwt-token')
+      .send(newPublicSpace);
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('name', 'Auditorio Principal');
   });
@@ -30,13 +34,18 @@ describe('Public Spaces Routes', () => {
       name: 'Auditorio Actualizado',
       capacity: 250
     };
-    const res = await request(app).patch('/api/public-spaces/1').send(updatedPublicSpace);
+    const res = await request(app)
+      .patch('/api/public-spaces/1')
+      .set('Authorization', 'Bearer valid-jwt-token')
+      .send(updatedPublicSpace);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', 1);
   });
 
   it('DELETE /api/public-spaces/:id - debería eliminar un public space', async () => {
-    const res = await request(app).delete('/api/public-spaces/1');
+    const res = await request(app)
+      .delete('/api/public-spaces/1')
+      .set('Authorization', 'Bearer valid-jwt-token');
     expect(res.status).toBe(204);
   });
 });
