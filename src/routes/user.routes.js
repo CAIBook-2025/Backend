@@ -178,4 +178,15 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST /users/admin-creation
+router.post('/admin-creation', async (req, res) => {
+  try {
+    const adminUser = await usersService.createAdminUser(req.body);
+    res.status(201).json(adminUser);
+  } catch (error) {
+    console.log('ERROR POST /users/admin-creation:', error);
+    res.status(500).json({ error: 'No se pudo crear el usuario administrador' });
+  }
+});
+
 module.exports = router;
