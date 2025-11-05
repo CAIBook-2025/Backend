@@ -153,7 +153,7 @@ class UsersService {
         status: 200,
         body: updatedUser
       };
-      
+
     } catch (error) {
       console.error('Error al actualizar usuario:', error);
       return {
@@ -162,8 +162,31 @@ class UsersService {
       };
     }
   }
+
+  async getUserById(id) {
+    try {
+      const user = await prisma.user.findUnique({ where: { id } });
+
+      if (!user) {
+        return {
+          status: 404,
+          body: { error: 'Usuario no encontrado' }
+        };
+      }
+
+      return {
+        status: 200,
+        body: user
+      };
+
+    } catch (error) {
+      console.error('Error al obtener usuario por ID:', error);
+      return {
+        status: 500,
+        body: { error: 'Error interno del servidor.' }
+      };
+    }
+  }
 }
-
-
 
 module.exports = new UsersService();

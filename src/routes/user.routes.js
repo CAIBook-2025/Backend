@@ -26,6 +26,44 @@ router.get('/', checkJwt, checkAdmin, async (req, res) => {
   }
 });
 
+// GET /users/:id
+router.get('/:id', checkJwt, async (req, res) => {
+  try {
+    const result = await usersService.getUserById(Number(req.params.id));
+    res.status(result.status).json(result.body);
+  } catch (error) {
+    console.log('ERROR GET /users/:id:', error);
+    res.status(500).json({ error: 'No se pudo obtener el usuario' });
+  }
+});
+
+// GET /users/check
+router.get('/check', checkJwt, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub } });
+    if (user) {
+      console.log(user);
+      res.json({ exists: true, user });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (error) {
+    console.log('ERROR GET /users/check:', error);
+    res.status(500).json({ error: 'No se pudo verificar el usuario' });
+  }
+});
+
+// POST /users
+router.post('/', checkJwt, async (req, res) => {
+  try {
+    const user = await usersService.createUser(req.body);
+    res.status(201).json(user);
+  } catch (error) {
+    console.log('ERROR POST /users:', error);
+    res.status(500).json({ error: 'No se pudo crear el usuario' });
+  }
+});
+
 // GET /users/profile
 router.get('/profile', checkJwt, async (req, res) => {
   try {
@@ -105,50 +143,7 @@ router.get('/profile', checkJwt, async (req, res) => {
   }
 });
 
-// GET /users/check
-router.get('/check', checkJwt, async (req, res) => {
-  try {
-    const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub } });
-    if (user) {
-      console.log(user);
-      res.json({ exists: true, user });
-    } else {
-      res.json({ exists: false });
-    }
-  } catch (error) {
-    console.log('ERROR GET /users/check:', error);
-    res.status(500).json({ error: 'No se pudo verificar el usuario' });
-  }
-});
-
-// GET /users/:id
-router.get('/:id', async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
-
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-
-    res.json(user);
-  } catch (error) {
-    console.log('ERROR GET /users/:id:', error);
-    res.status(500).json({ error: 'No se pudo obtener el usuario' });
-  }
-});
-
-// POST /users
-router.post('/', checkJwt, async (req, res) => {
-  try {
-    const user = await usersService.createUser(req.body);
-    res.status(201).json(user);
-  } catch (error) {
-    console.log('ERROR POST /users:', error);
-    res.status(500).json({ error: 'No se pudo crear el usuario' });
-  }
-});
-
-// PATCH /users/:id
+// PATCH /users/profile
 router.patch('/profile', checkJwt, async (req, res) => {
   try {
     const result = await usersService.updateUser(req.auth.sub, req.body);
@@ -174,7 +169,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /users/admin-creation
+// POST /users/admin/create
 router.post('/admin/create', checkJwt, async (req, res) => {
   try {
     const adminUser = await usersService.createAdminUser(req.body);
@@ -185,6 +180,7 @@ router.post('/admin/create', checkJwt, async (req, res) => {
   }
 });
 
+// PATCH /users/admin/promote
 router.patch('/admin/promote', checkJwt, checkAdmin, async (req, res) => {
   try {
     const user_id = req.body.user_id;
