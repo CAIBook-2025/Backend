@@ -50,7 +50,9 @@ app.use('/api/history', historyRouter);
 // JWT error handler
 app.use((err, _req, res, _next) => {
   if (err.name === 'UnauthorizedError') {
+    console.error('JWT error:', err, err.message);
     res.status(401).json({ error: 'Invalid token' });
+
   }
 });
 
