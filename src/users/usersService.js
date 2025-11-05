@@ -78,16 +78,42 @@ class UsersService {
   }
 
   async promoteUserToAdmin(user_id) {
-    console.log('Promoting user to admin:', user_id);
     try {
+      const user = await prisma.user.findUnique({ where: { id: user_id } });
+
+      if (!user) {
+        return {
+          status: 404,
+          body: { error: 'Usuario no encontrado.' }
+        };
+      }
+
+      if (user.role === 'ADMIN') {
+        return {
+          status: 200,
+          body: { message: 'El usuario ya es administrador.' }
+        };
+      }
+
       const updatedUser = await prisma.user.update({
         where: { id: user_id },
         data: { role: 'ADMIN' }
       });
-      return updatedUser;
+
+      return {
+        status: 200,
+        body: {
+          message: 'Usuario promovido a administrador correctamente.',
+          user: updatedUser
+        }
+      };
+      
     } catch (error) {
-      console.error('Error promoting user to admin:', error);
-      throw error;
+      console.error('Error al promover usuario a admin:', error);
+      return {
+        status: 500,
+        body: { error: 'Error interno del servidor.' }
+      };
     }
   }
 }

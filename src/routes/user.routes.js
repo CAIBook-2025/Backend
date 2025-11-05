@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
-const { checkJwt } = require('../middleware/auth');
+const { checkJwt, checkAdmin } = require('../middleware/auth');
 const usersService = require('../users/usersService');
 
 const router = Router();
@@ -189,11 +189,11 @@ router.post('/admin/create', checkJwt, async (req, res) => {
   }
 });
 
-router.patch('/admin/promote', checkJwt, async (req, res) => {
+router.patch('/admin/promote', checkJwt, checkAdmin, async (req, res) => {
   try {
     const user_id = req.body.user_id;
-    const updatedUser = await usersService.promoteUserToAdmin(user_id);
-    res.json(updatedUser);
+    const result = await usersService.promoteUserToAdmin(user_id);
+    res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR PATCH /users/admin/promote:', error);
     res.status(500).json({ error: 'No se pudo promover al usuario' });
