@@ -52,6 +52,7 @@ router.get('/profile', checkJwt, async (req, res) => {
 router.get('/check', checkJwt, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub } });
+    console.log(user);
     if (user) {
       console.log(user);
       res.json({ exists: true, user });

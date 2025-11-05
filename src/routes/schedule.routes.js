@@ -46,6 +46,63 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /my study-rooms associated to current user
+router.get('/my/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const {
+      status,
+      from,
+      to,
+      includePast = 'false',
+      page = '1',
+      pageSize = '20'
+    } = req.query;
+
+    // Construcción del filtro
+    const where = { user_id: Number(userId) };
+    if (status) where.status = status; // enum RequestStatus
+
+    // Rango de fechas
+    const dateFilter = {};
+    if (from) dateFilter.gte = new Date(`${from}T00:00:00.000Z`);
+    if (to) dateFilter.lte = new Date(`${to}T23:59:59.999Z`);
+
+    // Si no me piden incluir pasadas y no hay 'from', parto desde hoy
+    const includePastBool = String(includePast).toLowerCase() === 'true';
+    if (!includePastBool && !from) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      dateFilter.gte = dateFilter.gte ?? today;
+    }
+    if (Object.keys(dateFilter).length) where.day = dateFilter;
+
+    // Paginación
+    const take = Math.min(Number(pageSize) || 20, 100);
+    const skip = ((Number(page) || 1) - 1) * take;
+
+    const [items, total] = await prisma.$transaction([
+      prisma.sRScheduling.findMany({
+        where,
+        include: {
+          studyRoom: true, // nombre, capacidad, location, etc.
+        },
+        orderBy: [{ day: 'asc' }, { module: 'asc' }],
+        skip,
+        take,
+      }),
+      prisma.sRScheduling.count({ where }),
+    ]);
+
+    res.json({ total, page: Number(page) || 1, pageSize: take, items });
+  } catch (err) {
+    console.error('GET /api/schedules/my error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+})
+
 // GET /schedules/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -98,10 +155,12 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /schedules/:id
-router.put('/:id', async (req, res) => {
+// PUT /schedules/book/:id
+router.put('/book/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
+    console.log(id);
+    console.log(req.body);
     const { userId } = req.body || {};
 
     if (!Number.isInteger(id) || id <= 0) {
@@ -123,6 +182,8 @@ router.put('/:id', async (req, res) => {
       },
     });
 
+    console.log("RESULTADO: ", result)
+
     if (result.count !== 1) {
       return res.status(409).json({
         error: 'El horario no está disponible o no existe',
@@ -135,6 +196,80 @@ router.put('/:id', async (req, res) => {
   } catch (error) {
     console.log('ERROR PUT /schedules/:id/reserve:', error);
     return res.status(500).json({ error: 'No se pudo reservar el horario' });
+  }
+});
+
+// PUT /schedules/cancel/:id
+router.put('/cancel/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const result = await prisma.sRScheduling.updateMany({
+      where: {
+        id,
+        available: 'UNAVAILABLE',
+      },
+      data: {
+        user_id: null,
+        available: 'AVAILABLE',
+      },
+    });
+
+    console.log("RESULTADO: ", result)
+
+    if (result.count !== 1) {
+      return res.status(409).json({
+        error: 'El horario no está disponible o no existe',
+      });
+    }
+
+    const updated = await prisma.sRScheduling.findUnique({ where: { id } });
+    return res.json(updated);
+
+  } catch (error) {
+    console.log('ERROR PUT /schedules/:id/reserve:', error);
+    return res.status(500).json({ error: 'No se pudo cancelar la reserva' });
+  }
+});
+
+// PUT /schedules/finish/:id
+router.put('/finish/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const result = await prisma.sRScheduling.updateMany({
+      where: {
+        id,
+        available: 'UNAVAILABLE',
+      },
+      data: {
+        user_id: null,
+        available: 'AVAILABLE',
+      },
+    });
+
+    console.log("RESULTADO: ", result)
+
+    if (result.count !== 1) {
+      return res.status(409).json({
+        error: 'El horario no está disponible o no existe',
+      });
+    }
+
+    const updated = await prisma.sRScheduling.findUnique({ where: { id } });
+    return res.json(updated);
+
+  } catch (error) {
+    console.log('ERROR PUT /schedules/:id/reserve:', error);
+    return res.status(500).json({ error: 'No se pudo cancelar la reserva' });
   }
 });
 
