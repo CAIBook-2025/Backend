@@ -6,7 +6,7 @@ const usersService = require('../users/usersService');
 const router = Router();
 
 // GET /users
-router.get('/', async (req, res) => {
+router.get('/', checkJwt, checkAdmin, async (req, res) => {
   try {
     const take = Math.min(Math.max(Number(req.query.take) || 20, 1), 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
@@ -149,15 +149,11 @@ router.post('/', checkJwt, async (req, res) => {
 });
 
 // PATCH /users/:id
-router.patch('/:id', async (req, res) => {
+router.patch('/profile', checkJwt, async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
-
-    const updated = await prisma.user.update({ where: { id }, data: req.body || {} });
-    res.json(updated);
+    const result = await usersService.updateUser(req.auth.sub, req.body);
+    res.status(result.status).json(result.body);
   } catch (error) {
-    if (error?.code === 'P2025') return res.status(404).json({ error: 'Usuario no encontrado' });
     console.log('ERROR PATCH /users/:id:', error);
     res.status(500).json({ error: 'No se pudo actualizar el usuario' });
   }
