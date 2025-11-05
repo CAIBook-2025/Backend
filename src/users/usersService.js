@@ -14,26 +14,10 @@ class UsersService {
   async createAdminUser(createAdminUserRequestData) {
 
     const machineToMachineToken = await getMachineToMachineToken();
-
     const newAdminUserEmail = createAdminUserRequestData.email.toLowerCase();
     const newAdminUserPassword = this.createAdminUserPassword();
-
     const newAdminUserAuth0 = await this.createAdminUserInAuth0(newAdminUserEmail, newAdminUserPassword, machineToMachineToken);
-
-    const adminUser = await prisma.user.create({
-      data: {
-        auth0_id: newAdminUserAuth0.user_id,
-        email: newAdminUserEmail,
-        first_name: 'actualizar',
-        last_name: 'actualizar',
-        role: 'ADMIN',
-        is_representative: false,
-        is_moderator: false,
-        career: 'admin cai',
-        phone: '1',
-        student_number: '1',
-      }
-    });
+    const adminUser = await this.createAdminUserInOwnDB(newAdminUserAuth0, newAdminUserEmail);
     return {
       status: 'success',
       adminUser: adminUser,
@@ -66,6 +50,29 @@ class UsersService {
       return data;
     } catch (error) {
       console.error('Error creating user in Auth0:', error);
+      throw error;
+    }
+  }
+
+  async createAdminUserInOwnDB(newAdminUserAuth0, newAdminUserEmail) {
+    try {
+      const adminUser = await prisma.user.create({
+        data: {
+          auth0_id: newAdminUserAuth0.user_id,
+          email: newAdminUserEmail,
+          first_name: 'actualizar',
+          last_name: 'actualizar',
+          role: 'ADMIN',
+          is_representative: false,
+          is_moderator: false,
+          career: 'admin cai',
+          phone: '1',
+          student_number: '1',
+        }
+      });
+      return adminUser;
+    } catch (error) {
+      console.error('Error creating admin user in own DB:', error);
       throw error;
     }
   }
