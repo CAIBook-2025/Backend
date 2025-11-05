@@ -76,6 +76,22 @@ class UsersService {
       throw error;
     }
   }
+
+  async promoteUserToAdmin(user_id) {
+    console.log('Promoting user to admin:', user_id);
+    try {
+      const updatedUser = await prisma.user.update({
+        where: { id: user_id },
+        data: { role: 'ADMIN' }
+      });
+      return updatedUser;
+    } catch (error) {
+      console.error('Error promoting user to admin:', error);
+      throw error;
+    }
+  }
 }
+
+
 
 module.exports = new UsersService();

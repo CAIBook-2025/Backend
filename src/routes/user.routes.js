@@ -179,13 +179,24 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /users/admin-creation
-router.post('/admin-creation', async (req, res) => {
+router.post('/admin/create', checkJwt, async (req, res) => {
   try {
     const adminUser = await usersService.createAdminUser(req.body);
     res.status(201).json(adminUser);
   } catch (error) {
     console.log('ERROR POST /users/admin-creation:', error);
     res.status(500).json({ error: 'No se pudo crear el usuario administrador' });
+  }
+});
+
+router.patch('/admin/promote', checkJwt, async (req, res) => {
+  try {
+    const user_id = req.body.user_id;
+    const updatedUser = await usersService.promoteUserToAdmin(user_id);
+    res.json(updatedUser);
+  } catch (error) {
+    console.log('ERROR PATCH /users/admin/promote:', error);
+    res.status(500).json({ error: 'No se pudo promover al usuario' });
   }
 });
 
