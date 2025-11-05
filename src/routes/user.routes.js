@@ -26,86 +26,29 @@ router.get('/', checkJwt, checkAdmin, async (req, res) => {
   }
 });
 
+// POST /users
+router.post('/', checkJwt, async (req, res) => {
+  try {
+    const result = await usersService.createUserInOwnDB(req.body);
+    res.status(result.status).json(result.body);
+  } catch (error) {
+    console.log('ERROR POST /users:', error);
+    res.status(500).json({ error: 'No se pudo crear el usuario' });
+  }
+});
+
 // GET /users/profile
 router.get('/profile', checkJwt, async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { auth0_id: req.auth.sub },
-      select: { id: true, first_name: true, last_name: true, email: true }
-    });
-
-    const now = new Date();
-
-    const [schedules, strikes, attendances] = await Promise.all([
-      // Reservas de salas del usuario (SRScheduling) + sala
-      prisma.sRScheduling.findMany({
-        where: { user_id: user.id }, // "activas" = desde hoy
-        include: { studyRoom: true },
-        orderBy: [{ day: 'asc' }, { module: 'asc' }],
-      }),
-
-      // Strikes recibidos por el estudiante
-      prisma.strike.findMany({
-        where: { student_id: user.id },
-        orderBy: { date: 'desc' },
-      }),
-
-      // Asistencias del usuario a eventos (+ evento y + solicitud del evento para el nombre)
-      prisma.attendance.findMany({
-        where: { student_id: user.id },
-        include: {
-          event: {                    // EventsScheduling
-            include: { eventRequest: true }, // para obtener "name", "goal", etc.
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
-
-    console.log(schedules);
-    console.log(strikes);
-    console.log('strikes.length:', strikes.length);
-
-    const upcomingEvents = attendances
-      .filter(a => a.event?.start_time && a.event.start_time >= now)
-      .map(a => ({
-        id: a.event.id,
-        title: a.event.eventRequest?.name ?? 'Evento',
-        start: a.event.start_time,
-        end: a.event.end_time,
-        status: 'DISPONIBLE',
-      }))
-      .sort((a, b) => +new Date(a.start) - +new Date(b.start));
-
-    const reservasActivas = schedules.map(s => ({
-      id: s.id,
-      roomName: s.studyRoom?.name ?? 'Sala',
-      location: s.studyRoom?.location ?? '',
-      day: s.day,
-      module: s.module,
-    }));
-
-    console.log(reservasActivas);
-
-    const completeData = {
-      user,
-      schedule: reservasActivas,
-      scheduleCount: reservasActivas.length,
-      strikes,
-      strikesCount: strikes.length,
-      upcomingEvents,
-      upcomingEventsCount: upcomingEvents.length,
-      attendances,
-      attendancesCount: attendances.length
-    };
-    res.json(completeData);
+    const result = await usersService.getUserProfile(req.auth.sub);
+    res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR GET /users/profile:', error);
     res.status(500).json({ error: 'No se pudo obtener el perfil del usuario' });
   }
 });
 
-// GET /users/check
+// GET /users/check - debe ir antes de GET /users/:id porque si no lo pilla como id = 'check'
 router.get('/check', checkJwt, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { auth0_id: req.auth.sub } });
@@ -122,33 +65,17 @@ router.get('/check', checkJwt, async (req, res) => {
 });
 
 // GET /users/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', checkJwt, async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
-
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-
-    res.json(user);
+    const result = await usersService.getUserById(Number(req.params.id));
+    res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR GET /users/:id:', error);
     res.status(500).json({ error: 'No se pudo obtener el usuario' });
   }
 });
 
-// POST /users
-router.post('/', checkJwt, async (req, res) => {
-  try {
-    const user = await usersService.createUser(req.body);
-    res.status(201).json(user);
-  } catch (error) {
-    console.log('ERROR POST /users:', error);
-    res.status(500).json({ error: 'No se pudo crear el usuario' });
-  }
-});
-
-// PATCH /users/:id
+// PATCH /users/profile
 router.patch('/profile', checkJwt, async (req, res) => {
   try {
     const result = await usersService.updateUser(req.auth.sub, req.body);
@@ -159,7 +86,7 @@ router.patch('/profile', checkJwt, async (req, res) => {
   }
 });
 
-// DELETE /users/:id
+// DELETE /users/:id - Fully delete: borra realmente el usuario de la db para limpiarla
 router.delete('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -174,7 +101,21 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /users/admin-creation
+// PATCH /users/delete/:id - Soft delete: marca el usuario como eliminado
+// router.patch('/delete/:id', checkJwt, checkAdmin, async (req, res) => {})
+
+// GET /users/admin/:id
+router.get('/admin/:id', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    const result = await usersService.getUserByIdBeingAdmin(Number(req.params.id), req.auth.sub);
+    res.status(result.status).json(result.body);
+  } catch (error) {
+    console.log('ERROR GET /users/admin/:id:', error);
+    res.status(500).json({ error: 'No se pudo obtener el usuario administrador' });
+  }
+});
+
+// POST /users/admin/create
 router.post('/admin/create', checkJwt, async (req, res) => {
   try {
     const adminUser = await usersService.createAdminUser(req.body);
@@ -185,6 +126,7 @@ router.post('/admin/create', checkJwt, async (req, res) => {
   }
 });
 
+// PATCH /users/admin/promote
 router.patch('/admin/promote', checkJwt, checkAdmin, async (req, res) => {
   try {
     const user_id = req.body.user_id;
