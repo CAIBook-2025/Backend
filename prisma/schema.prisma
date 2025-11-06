@@ -15,6 +15,7 @@ model User {
   role              UserRole       @default(STUDENT)
   is_representative Boolean        @default(false)
   is_moderator      Boolean        @default(false)
+  is_deleted        Boolean        @default(false)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   auth0_id          String         @unique
@@ -76,7 +77,7 @@ model SRScheduling {
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   available AvailabilityStatus @default(AVAILABLE)
-  status    RequestStatus      @default(PENDING)
+  status    AttendanceStatus      @default(PENDING)
   day       DateTime
   module    Int
   sr_id     Int
