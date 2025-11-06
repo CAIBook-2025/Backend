@@ -78,6 +78,7 @@ model SRScheduling {
   updatedAt DateTime           @updatedAt
   available AvailabilityStatus @default(AVAILABLE)
   status    AttendanceStatus      @default(PENDING)
+  is_finished Boolean         @default(false)
   day       DateTime
   module    Int
   sr_id     Int
