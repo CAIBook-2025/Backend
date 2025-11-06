@@ -360,6 +360,22 @@ class UsersService {
     return completeData;
   }
 
+  async deleteUserById(id) {
+    try {
+      const deletedUser = await prisma.user.delete({ where: { id } });
+      return {
+        status: 200,
+        body: { message: 'Usuario eliminado correctamente', user: deletedUser }
+      };
+    } catch (error) {
+      console.error('Error al eliminar el usuario:', error);
+      return {
+        status: 500,
+        body: { error: 'Error interno del servidor.' }
+      };
+    }
+  }
+
   async softDeleteUserById(id) {
     try {
       const user = await prisma.user.findUnique({ where: { id } });
