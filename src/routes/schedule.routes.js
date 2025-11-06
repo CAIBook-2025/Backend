@@ -72,12 +72,18 @@ router.get('/my/:userId', async (req, res) => {
 
     // Si no me piden incluir pasadas y no hay 'from', parto desde hoy
     const includePastBool = String(includePast).toLowerCase() === 'true';
-    if (!includePastBool && !from) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      dateFilter.gte = dateFilter.gte ?? today;
-    }
-    if (Object.keys(dateFilter).length) where.day = dateFilter;
+    
+    // if (!includePastBool && !from) {
+    //   const today = new Date();
+    //   console.log("TODAY", today);
+    //   today.setHours(0, 0, 0, 0);
+    //   console.log("TODAY 2", today)
+    //   dateFilter.gte = dateFilter.gte ?? today;
+    // }
+    // if (Object.keys(dateFilter).length) {
+    //   console.log("ENTRA AQUÍ");
+    //   where.day = dateFilter;
+    // }
 
     // Paginación
     const take = Math.min(Number(pageSize) || 20, 100);
@@ -155,13 +161,10 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /schedules/book/:id
-router.put('/book/:id', async (req, res) => {
+// PATCH /schedules/book
+router.patch('/book', async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    console.log(id);
-    console.log(req.body);
-    const { userId } = req.body || {};
+    const { userId, id } = req.body || {};
 
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: 'ID inválido' });
@@ -175,6 +178,7 @@ router.put('/book/:id', async (req, res) => {
         id,
         user_id: null,
         available: 'AVAILABLE',
+        status: 'PENDING'
       },
       data: {
         user_id: userId,
@@ -182,8 +186,6 @@ router.put('/book/:id', async (req, res) => {
       },
     });
 
-    console.log("RESULTADO: ", result)
-
     if (result.count !== 1) {
       return res.status(409).json({
         error: 'El horario no está disponible o no existe',
@@ -194,24 +196,25 @@ router.put('/book/:id', async (req, res) => {
     return res.json(updated);
 
   } catch (error) {
-    console.log('ERROR PUT /schedules/:id/reserve:', error);
+    console.log('ERROR PATCH /schedules/:id/reserve:', error);
     return res.status(500).json({ error: 'No se pudo reservar el horario' });
   }
 });
 
-// PUT /schedules/cancel/:id
-router.put('/cancel/:id', async (req, res) => {
+// PATCH /schedules/cancel/:id
+router.patch('/cancel', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const { scheduleId, userId } = req.body || {};
 
-    if (!Number.isInteger(id) || id <= 0) {
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
       return res.status(400).json({ error: 'ID inválido' });
     }
 
     const result = await prisma.sRScheduling.updateMany({
       where: {
-        id,
+        id: scheduleId,
         available: 'UNAVAILABLE',
+        user_id: userId
       },
       data: {
         user_id: null,
@@ -227,51 +230,87 @@ router.put('/cancel/:id', async (req, res) => {
       });
     }
 
-    const updated = await prisma.sRScheduling.findUnique({ where: { id } });
+    const updated = await prisma.sRScheduling.findUnique({ where: { id: scheduleId } });
     return res.json(updated);
 
   } catch (error) {
-    console.log('ERROR PUT /schedules/:id/reserve:', error);
+    console.log('ERROR PATCH /schedules/cancel:', error);
     return res.status(500).json({ error: 'No se pudo cancelar la reserva' });
   }
 });
 
-// PUT /schedules/finish/:id
-router.put('/finish/:id', async (req, res) => {
+// PATCH /schedules/checkin
+router.patch('/checkin', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const { scheduleId, userId } = req.body || {};
 
-    if (!Number.isInteger(id) || id <= 0) {
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
       return res.status(400).json({ error: 'ID inválido' });
     }
 
-    const result = await prisma.sRScheduling.updateMany({
-      where: {
-        id,
+    const where = {
+      id: scheduleId,
         available: 'UNAVAILABLE',
+        is_finished: false,
+        status: 'PENDING',
+        user_id: userId
+    };
+
+    console.log(where);
+
+    const result = await prisma.sRScheduling.update({
+      where: {
+        id: scheduleId,
+        available: 'UNAVAILABLE',
+        is_finished: false,
+        status: 'PENDING',
+        user_id: userId
       },
       data: {
-        user_id: null,
-        available: 'AVAILABLE',
+        status: 'PRESENT'
       },
     });
 
-    console.log("RESULTADO: ", result)
-
-    if (result.count !== 1) {
-      return res.status(409).json({
-        error: 'El horario no está disponible o no existe',
-      });
-    }
-
-    const updated = await prisma.sRScheduling.findUnique({ where: { id } });
+    const updated = await prisma.sRScheduling.findUnique({ where: { id: scheduleId } });
     return res.json(updated);
 
   } catch (error) {
-    console.log('ERROR PUT /schedules/:id/reserve:', error);
-    return res.status(500).json({ error: 'No se pudo cancelar la reserva' });
+    console.log('ERROR PUT /srSchedules/checkout', error);
+    return res.status(500).json({ error: 'No se pudo hacer checkout' });
   }
 });
+
+// PATCH /schedules/checkout
+router.patch('/checkout', async (req, res) => {
+  try {
+    const { scheduleId, userId } = req.body || {};
+
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const result = await prisma.sRScheduling.update({
+      where: {
+        id: scheduleId,
+        available: 'UNAVAILABLE',
+        is_finished: false,
+        status: 'PRESENT',
+        user_id: userId
+      },
+      data: {
+        is_finished: true
+      },
+    });
+
+    const updated = await prisma.sRScheduling.findUnique({ where: { id: scheduleId } });
+    return res.json(updated);
+
+  } catch (error) {
+    console.log('ERROR PUT /srSchedules/checkout', error);
+    return res.status(500).json({ error: 'No se pudo hacer checkout' });
+  }
+});
+
 
 // DELETE /schedules/:id
 router.delete('/:id', async (req, res) => {
