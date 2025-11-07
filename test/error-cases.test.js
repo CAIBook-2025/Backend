@@ -50,7 +50,9 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
 
   describe('IDs inválidos y validación de parámetros', () => {
     it('GET /api/users/:id - debería devolver 400 para ID inválido', async () => {
-      const res = await request(app).get('/api/users/invalid-id');
+      const res = await request(app)
+        .get('/api/users/invalid-id')
+        .set('Authorization', 'Bearer valid-token');
       expect(res.status).toBe(400); // Bad Request por ID inválido
       expect(res.body).toHaveProperty('error');
     });

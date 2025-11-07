@@ -84,6 +84,7 @@ router.get('/study-rooms', checkJwt, async (req, res) => {
       module: reservation.module,
       status: reservation.status,
       available: reservation.available,
+      isFinished: reservation.is_finished,
       studyRoom: reservation.studyRoom,
       createdAt: reservation.createdAt,
       updatedAt: reservation.updatedAt
