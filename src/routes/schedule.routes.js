@@ -342,7 +342,7 @@ router.patch('/enable', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized, must be a CAI admin' });
     }
 
-    const result = await prisma.sRScheduling.update({
+    await prisma.sRScheduling.update({
       where: {
         id: scheduleId,
         available: 'MAINTENANCE',
@@ -361,7 +361,7 @@ router.patch('/enable', async (req, res) => {
     console.log('ERROR PATCH /srSchedules/enable', error);
     return res.status(500).json({ error: 'No se pudo habilitar la sala' });
   }
-})
+});
 
 // PATCH /schedules/disable
 router.patch('/disable', async (req, res) => {
@@ -378,7 +378,7 @@ router.patch('/disable', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized, must be a CAI admin' });
     }
 
-    const result = await prisma.sRScheduling.update({
+    await prisma.sRScheduling.update({
       where: {
         id: scheduleId,
         available: 'AVAILABLE',
@@ -397,7 +397,7 @@ router.patch('/disable', async (req, res) => {
     console.log('ERROR PATCH /srSchedules/enable', error);
     return res.status(500).json({ error: 'No se pudo habilitar la sala' });
   }
-})
+});
 
 // PATCH /schedules/cancel/admin
 router.patch('/cancel/admin', async (req, res) => {
@@ -414,7 +414,7 @@ router.patch('/cancel/admin', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized, must be a CAI admin' });
     }
 
-    const result = await prisma.sRScheduling.updateMany({
+    await prisma.sRScheduling.updateMany({
       where: {
         id: scheduleId,
         available: 'UNAVAILABLE'
