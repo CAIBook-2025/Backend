@@ -341,6 +341,9 @@ class UsersService {
       location: s.studyRoom?.location ?? '',
       day: s.day,
       module: s.module,
+      status: s.status,
+      available: s.available,
+      isFinished: s.is_finished
     }));
     return reservasActivas;
   }
