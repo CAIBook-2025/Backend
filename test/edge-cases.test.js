@@ -138,7 +138,8 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
       };
       
       const res = await request(app)
-        .patch('/api/users/1')
+        .patch('/api/users/profile')
+        .set('Authorization', 'Bearer valid-token')
         .send(partialUpdate);
       
       expect(res.status).toBe(200);
