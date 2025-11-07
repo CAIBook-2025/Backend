@@ -21,4 +21,40 @@ async function getMachineToMachineToken() {
   }
 }
 
-module.exports = { getMachineToMachineToken } ;
+async function blockUserInAuth0(auth0Id) {
+  try {
+    const token = await getMachineToMachineToken();
+    const response = await fetch(`https://${process.env.AUTH0_DOMAIN}/api/v2/users/${auth0Id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ blocked: true })
+    });
+    return response;
+  } catch (error) {
+    console.error(`Error blocking user ${auth0Id} in Auth0:`, error);
+    throw error;
+  }
+}
+
+async function unblockUserInAuth0(auth0Id) {
+  try {
+    const token = await getMachineToMachineToken();
+    const response = await fetch(`https://${process.env.AUTH0_DOMAIN}/api/v2/users/${auth0Id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ blocked: false })
+    });
+    return response;
+  } catch (error) {
+    console.error(`Error unblocking user ${auth0Id} in Auth0:`, error);
+    throw error;
+  }
+}
+
+module.exports = { getMachineToMachineToken, blockUserInAuth0, unblockUserInAuth0 };

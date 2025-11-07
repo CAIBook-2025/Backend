@@ -88,13 +88,10 @@ router.patch('/profile', checkJwt, async (req, res) => {
 });
 
 // DELETE /users/:id - Fully delete: borra realmente el usuario de la db para limpiarla
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', checkJwt, checkAdmin, async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
-
-    await prisma.user.delete({ where: { id } });
-    res.status(204).end();
+    const result = await usersService.deleteUserById(Number(req.params.id));
+    res.status(result.status).json(result.body);
   } catch (error) {
     if (error?.code === 'P2025') return res.status(404).json({ error: 'Usuario no encontrado' });
     console.log('ERROR DELETE /users/:id:', error);
@@ -102,8 +99,38 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// PATCH /users/delete/:id - Soft delete: marca el usuario como eliminado
-// router.patch('/delete/:id', checkJwt, checkAdmin, async (req, res) => {})
+// PATCH /users/admin/delete/:id - Soft delete: marca el usuario como eliminado
+router.patch('/admin/delete/:id', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    const result = await usersService.softDeleteUserById(Number(req.params.id));
+    res.status(result.status).json(result.body);
+  } catch (error) {
+    console.log('ERROR PATCH /users/admin/delete/:id:', error);
+    res.status(500).json({ error: 'No se pudo eliminar el usuario' });
+  }
+});
+
+// PATCH /users/admin/restore/:id
+router.patch('/admin/restore/:id', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    const result = await usersService.restoreSoftDeletedUserById(Number(req.params.id));
+    res.status(result.status).json(result.body);
+  } catch (error) {
+    console.log('ERROR PATCH /users/admin/restore/:id:', error);
+    res.status(500).json({ error: 'No se pudo restaurar el usuario' });
+  }
+});
+
+// PATCH /users/delete/me 
+router.patch('/delete/me', checkJwt, async (req, res) => {
+  try {
+    const result = await usersService.softDeleteOwnUser(req.auth.sub);
+    res.status(result.status).json(result.body);
+  } catch (error) {
+    console.log('ERROR PATCH /users/delete/me:', error);
+    res.status(500).json({ error: 'No se pudo eliminar el usuario' });
+  }
+});
 
 // GET /users/admin/:id
 router.get('/admin/:id', checkJwt, checkAdmin, async (req, res) => {
