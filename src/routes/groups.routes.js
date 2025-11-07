@@ -699,18 +699,18 @@ router.get('/my-groups-id/:id', checkJwt, async (req, res) => {
     
     const moderators = moderatorIds.length > 0
       ? await prisma.user.findMany({
-          where: { 
-            id: { in: moderatorIds },
-            is_moderator: true 
-          },
-          select: { 
-            id: true, 
-            first_name: true, 
-            last_name: true, 
-            email: true,
-            role: true
-          }
-        })
+        where: { 
+          id: { in: moderatorIds },
+          is_moderator: true 
+        },
+        select: { 
+          id: true, 
+          first_name: true, 
+          last_name: true, 
+          email: true,
+          role: true
+        }
+      })
       : [];
 
     res.json({
@@ -813,7 +813,7 @@ router.patch('/my-groups/design-moderators/:id', checkJwt, async (req, res) => {
       return res.status(404).json({ error: 'Grupo no encontrado o no autorizado' });
     }
 
-   const actualiceModerators = await prisma.user.updateMany({
+    await prisma.user.updateMany({
       where: { 
         id: { in: moderators },
         is_moderator: false  // Solo actualiza los que no son moderadores

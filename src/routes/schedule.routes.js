@@ -56,7 +56,7 @@ router.get('/my/:userId', async (req, res) => {
       status,
       from,
       to,
-      includePast = 'false',
+      // includePast = 'false',
       page = '1',
       pageSize = '20'
     } = req.query;
@@ -71,7 +71,7 @@ router.get('/my/:userId', async (req, res) => {
     if (to) dateFilter.lte = new Date(`${to}T23:59:59.999Z`);
 
     // Si no me piden incluir pasadas y no hay 'from', parto desde hoy
-    const includePastBool = String(includePast).toLowerCase() === 'true';
+    // const includePastBool = String(includePast).toLowerCase() === 'true';
     
     // if (!includePastBool && !from) {
     //   const today = new Date();
@@ -107,7 +107,7 @@ router.get('/my/:userId', async (req, res) => {
     console.error('GET /api/schedules/my error:', err);
     res.status(500).json({ error: 'Server error' });
   }
-})
+});
 
 // GET /schedules/:id
 router.get('/:id', async (req, res) => {
@@ -222,7 +222,7 @@ router.patch('/cancel', async (req, res) => {
       },
     });
 
-    console.log("RESULTADO: ", result)
+    console.log('RESULTADO: ', result);
 
     if (result.count !== 1) {
       return res.status(409).json({
@@ -250,15 +250,15 @@ router.patch('/checkin', async (req, res) => {
 
     const where = {
       id: scheduleId,
-        available: 'UNAVAILABLE',
-        is_finished: false,
-        status: 'PENDING',
-        user_id: userId
+      available: 'UNAVAILABLE',
+      is_finished: false,
+      status: 'PENDING',
+      user_id: userId
     };
 
     console.log(where);
 
-    const result = await prisma.sRScheduling.update({
+    await prisma.sRScheduling.update({
       where: {
         id: scheduleId,
         available: 'UNAVAILABLE',
@@ -289,7 +289,7 @@ router.patch('/checkout', async (req, res) => {
       return res.status(400).json({ error: 'ID inválido' });
     }
 
-    const result = await prisma.sRScheduling.update({
+    await prisma.sRScheduling.update({
       where: {
         id: scheduleId,
         available: 'UNAVAILABLE',
