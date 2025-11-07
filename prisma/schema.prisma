@@ -18,6 +18,7 @@ model User {
   is_deleted        Boolean        @default(false)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+  deletedAt         DateTime       @default(now())
   auth0_id          String         @unique
   career            String
   phone             String
