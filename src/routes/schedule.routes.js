@@ -327,4 +327,112 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// PATCH /schedules/enable
+router.patch('/enable', async (req, res) => {
+  try {
+    const { scheduleId, adminId } = req.body || {};
+
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const user = await prisma.User.findUnique({ where: { id: adminId } });
+
+    if (user.role !== 'ADMIN') {
+      return res.status(401).json({ error: 'Unauthorized, must be a CAI admin' });
+    }
+
+    const result = await prisma.sRScheduling.update({
+      where: {
+        id: scheduleId,
+        available: 'MAINTENANCE',
+        is_finished: false,
+      },
+      data: {
+        available: 'AVAILABLE',
+        user_id: null
+      },
+    });
+
+    const updated = await prisma.sRScheduling.findUnique({ where: { id: scheduleId } });
+    return res.json(updated);
+
+  } catch (error) {
+    console.log('ERROR PATCH /srSchedules/enable', error);
+    return res.status(500).json({ error: 'No se pudo habilitar la sala' });
+  }
+})
+
+// PATCH /schedules/disable
+router.patch('/disable', async (req, res) => {
+  try {
+    const { scheduleId, adminId } = req.body || {};
+
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const user = await prisma.User.findUnique({ where: { id: adminId } });
+
+    if (user.role !== 'ADMIN') {
+      return res.status(401).json({ error: 'Unauthorized, must be a CAI admin' });
+    }
+
+    const result = await prisma.sRScheduling.update({
+      where: {
+        id: scheduleId,
+        available: 'AVAILABLE',
+        is_finished: false,
+      },
+      data: {
+        available: 'MAINTENANCE',
+        user_id: null
+      },
+    });
+
+    const updated = await prisma.sRScheduling.findUnique({ where: { id: scheduleId } });
+    return res.json(updated);
+
+  } catch (error) {
+    console.log('ERROR PATCH /srSchedules/enable', error);
+    return res.status(500).json({ error: 'No se pudo habilitar la sala' });
+  }
+})
+
+// PATCH /schedules/cancel/admin
+router.patch('/cancel/admin', async (req, res) => {
+  try {
+    const { scheduleId, adminId } = req.body || {};
+
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const user = await prisma.User.findUnique({ where: { id: adminId } });
+
+    if (user.role !== 'ADMIN') {
+      return res.status(401).json({ error: 'Unauthorized, must be a CAI admin' });
+    }
+
+    const result = await prisma.sRScheduling.updateMany({
+      where: {
+        id: scheduleId,
+        available: 'UNAVAILABLE'
+      },
+      data: {
+        user_id: null,
+        available: 'AVAILABLE'
+      },
+    });
+
+    const updated = await prisma.sRScheduling.findUnique({ where: { id: scheduleId } });
+    return res.json(updated);
+
+  } catch (error) {
+    console.log('ERROR PATCH /schedules/cancel:', error);
+    return res.status(500).json({ error: 'No se pudo cancelar la reserva' });
+  }
+});
+
+
 module.exports = router;
