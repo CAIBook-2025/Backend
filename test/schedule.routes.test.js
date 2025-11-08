@@ -27,11 +27,12 @@ describe('Schedule Routes', () => {
     expect(res.body).toHaveProperty('sr_id', 1);
   });
 
-  it('PUT /api/srSchedule/:id - debería reservar un schedule', async () => {
+  it('PATCH /api/srSchedule/book - debería reservar un schedule', async () => {
     const reserveData = {
-      userId: 1
+      userId: 1,
+      id: 1
     };
-    const res = await request(app).put('/api/srSchedule/1').send(reserveData);
+    const res = await request(app).patch('/api/srSchedule/book').send(reserveData);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('sr_id', 1);
   });

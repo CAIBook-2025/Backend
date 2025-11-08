@@ -3,14 +3,31 @@ process.env.NODE_ENV = 'test';
 // Mock del middleware de autenticación
 jest.mock('../src/middleware/auth', () => ({
   checkJwt: (req, res, next) => {
+    // Verificar si hay header de autorización
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // Mock exitoso - simula usuario autenticado
-      req.auth = { sub: 'test-user-id', email: 'test@example.com' };
-      next();
-    } else {
-      res.status(401).json({ error: 'No autorizado' });
+    
+    // Si no hay header de autorización, devolver 401
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No autorizado' });
     }
+    
+    // Si hay header pero no es válido (no comienza con 'Bearer ')
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Formato de token inválido' });
+    }
+    
+    // Si el token es 'invalid-token', devolver 401
+    if (authHeader === 'Bearer invalid-token') {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+    
+    // En caso contrario, simula usuario autenticado
+    req.auth = { sub: 'test-user-id', email: 'test@example.com' };
+    next();
+  },
+  checkAdmin: (req, res, next) => {
+    // Mock que simula que el usuario es admin
+    next();
   }
 }));
 
@@ -23,7 +40,83 @@ jest.mock('../src/users/usersService', () => ({
     last_name: 'User',
     auth0_id: 'test-user-id'
   }),
-  createUser: jest.fn((userData) => Promise.resolve({ id: 1, ...userData }))
+  createUser: jest.fn((userData) => Promise.resolve({ id: 1, ...userData })),
+  createUserInOwnDB: jest.fn((userData) => Promise.resolve({ 
+    status: 201,
+    body: { id: 1, ...userData }
+  })),
+  getUserProfile: jest.fn((auth0_id) => Promise.resolve({
+    status: 200,
+    body: {
+      user: { id: 1, email: 'test@example.com', first_name: 'Test', last_name: 'User', auth0_id },
+      schedule: [],
+      scheduleCount: 0,
+      strikes: [],
+      strikesCount: 0,
+      upcomingEvents: [],
+      upcomingEventsCount: 0,
+      attendances: [],
+      attendancesCount: 0
+    }
+  })),
+  getUserById: jest.fn((id) => {
+    if (isNaN(id) || id === null || id === undefined) {
+      return Promise.resolve({
+        status: 400,
+        body: { error: 'ID de usuario inválido' }
+      });
+    }
+    if (id < 1000) {
+      return Promise.resolve({
+        status: 200,
+        body: {
+          user: { id, email: 'test@example.com', first_name: 'Test', last_name: 'User' },
+          schedule: [],
+          scheduleCount: 0,
+          strikes: [],
+          strikesCount: 0,
+          upcomingEvents: [],
+          upcomingEventsCount: 0,
+          attendances: [],
+          attendancesCount: 0
+        }
+      });
+    }
+    return Promise.resolve({ status: 404, body: { error: 'Usuario no encontrado' } });
+  }),
+  updateUser: jest.fn((auth0_id, userData) => Promise.resolve({
+    status: 200,
+    body: { id: 1, ...userData }
+  })),
+  deleteUserById: jest.fn((_id) => Promise.resolve({
+    status: 204,
+    body: {}
+  })),
+  softDeleteUserById: jest.fn((_id) => Promise.resolve({
+    status: 200,
+    body: { message: 'Usuario marcado como eliminado' }
+  })),
+  restoreSoftDeletedUserById: jest.fn((_id) => Promise.resolve({
+    status: 200,
+    body: { message: 'Usuario restaurado' }
+  })),
+  softDeleteOwnUser: jest.fn((_auth0_id) => Promise.resolve({
+    status: 200,
+    body: { message: 'Usuario eliminado' }
+  })),
+  getUserByIdBeingAdmin: jest.fn((id, _admin_auth0_id) => Promise.resolve({
+    status: 200,
+    body: { id, email: 'test@example.com' }
+  })),
+  createAdminUser: jest.fn((data) => Promise.resolve({
+    status: 'success',
+    adminUser: { id: 1, ...data },
+    tempPassword: 'Admin#test-2025'
+  })),
+  promoteUserToAdmin: jest.fn((_user_id) => Promise.resolve({
+    status: 200,
+    body: { message: 'Usuario promovido a administrador' }
+  }))
 }));
 
 // Mock de la base de datos para evitar errores de conexión en los tests
@@ -291,10 +384,16 @@ jest.mock('../src/lib/prisma', () => ({
         return Promise.resolve({ id: args.where.id, ...args.data });
       }),
       updateMany: jest.fn((args) => {
-        // Simular actualización exitosa si el ID es válido y está disponible
-        if (args?.where?.id && args.where.id < 1000) {
+        // Simular actualización exitosa si las condiciones se cumplen
+        // Para el caso de reservar un schedule (book)
+        if (args?.where?.id && args?.where?.user_id === null && args?.where?.available === 'AVAILABLE') {
           return Promise.resolve({ count: 1 });
         }
+        // Para el caso de cancelar un schedule (cancel)
+        if (args?.where?.id && args?.where?.available === 'UNAVAILABLE') {
+          return Promise.resolve({ count: 1 });
+        }
+        // Si no coincide, no hay actualizaciones
         return Promise.resolve({ count: 0 });
       }),
       delete: jest.fn().mockResolvedValue({}),

@@ -143,6 +143,7 @@ router.get('/:id', checkJwt, async (req, res) => {
 // POST /group-requests - Crear solicitud de grupo
 router.post('/', checkJwt, async (req, res) => {
   try {
+
     const { name, goal, description, logo } = req.body;
     
     // Validación de campos requeridos
@@ -173,12 +174,20 @@ router.post('/', checkJwt, async (req, res) => {
     }
 
     // Obtener usuario autenticado
+    
     const user = await prisma.user.findUnique({
       where: { auth0_id: req.auth.sub }
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
+      console.error('Usuario no encontrado con auth0_id:', req.auth.sub);
+      return res.status(404).json({ 
+        error: 'Usuario no encontrado',
+        details: {
+          auth0_id: req.auth.sub,
+          auth: req.auth
+        }
+      });
     }
 
     // Verificar que el usuario no tenga otra solicitud pendiente

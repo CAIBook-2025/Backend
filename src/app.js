@@ -15,6 +15,7 @@ const publicSpacesRouter = require('./routes/publicSpaces.routes');
 const eventRequestsRouter = require('./routes/eventRequests.routes');
 const groupRequestsRouter = require('./routes/groupRequests.routes');
 const userRouter = require('./routes/user.routes');
+const historyRouter = require('./routes/history.routes');
 
 const app = express();
 
@@ -44,11 +45,14 @@ app.use('/api/sRooms', roomsRouter);
 app.use('/api/srSchedule', schedulesRouter);
 app.use('/api/strikes', strikesRouter);
 app.use('/api/attendance', attendanceRouter);
+app.use('/api/history', historyRouter);
 
 // JWT error handler
 app.use((err, _req, res, _next) => {
   if (err.name === 'UnauthorizedError') {
+    console.error('JWT error:', err, err.message);
     res.status(401).json({ error: 'Invalid token' });
+
   }
 });
 

@@ -19,6 +19,64 @@ function validateModeratorIdsArray(moderators_ids) {
   return [...new Set(moderators_ids)];
 }
 
+
+router.get('/my-groups', checkJwt, async (req, res) => {
+  try {
+    console.log('Ruta /my-groups alcanzada');
+    console.log('Auth sub:', req.auth?.sub);
+
+    // Encontrar el usuario por auth0_id
+    const requestingUser = await prisma.user.findUnique({ 
+      where: { auth0_id: req.auth.sub } 
+    });
+
+    console.log('Usuario encontrado:', requestingUser);
+
+    // Verificar que el usuario es representante
+    if (!requestingUser || !requestingUser.is_representative) {
+      return res.status(403).json({ error: 'Requiere ser representante' });
+    }
+
+    // Buscar grupos donde el usuario es representante
+    const groups = await prisma.group.findMany({ 
+      where: { repre_id: requestingUser.id },
+      include: {
+        groupRequest: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            goal: true,
+            logo: true,
+            status: true
+          }
+        },
+        eventRequests: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            day: true
+          }
+        }
+      }
+    });
+
+    console.log('Grupos encontrados:', groups);
+
+    res.json({
+      total_groups: groups.length,
+      groups
+    });
+  } catch (error) {
+    console.error('Error completo:', error);
+    res.status(500).json({ 
+      error: 'Error interno', 
+      details: error.message 
+    });
+  }
+});
+
 // GET /groups - Listar todos los grupos
 router.get('/', async (req, res) => {
   try {
@@ -565,6 +623,326 @@ router.get('/:id/events', async (req, res) => {
   } catch (error) {
     console.log('ERROR GET /groups/:id/events:', error);
     res.status(500).json({ error: 'No se pudieron obtener los eventos' });
+  }
+});
+
+
+
+// GET /groups/my-groups/:id - Detalle de un grupo que represento
+router.get('/my-groups-id/:id', checkJwt, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    // Encontrar el usuario por auth0_id
+    const requestingUser = await prisma.user.findUnique({ 
+      where: { auth0_id: req.auth.sub } 
+    });
+
+    // Verificar que el usuario es representante
+    if (!requestingUser || !requestingUser.is_representative) {
+      return res.status(403).json({ error: 'Requiere ser representante' });
+    }
+
+    const group = await prisma.group.findUnique({ 
+      where: { 
+        id,
+        repre_id: requestingUser.id  // Solo puede ver grupos que representa
+      },
+      include: {
+        groupRequest: {
+          include: {
+            user: {
+              select: { 
+                id: true, 
+                first_name: true, 
+                last_name: true, 
+                email: true,
+                role: true 
+              }
+            }
+          }
+        },
+        eventRequests: {
+          include: {
+            publicSpace: {
+              select: {
+                id: true,
+                name: true,
+                capacity: true,
+                location: true
+              }
+            },
+            eventsScheduling: {
+              select: {
+                id: true,
+                start_time: true,
+                end_time: true
+              }
+            }
+          },
+          orderBy: { day: 'desc' }
+        }
+      }
+    });
+    
+    if (!group) {
+      return res.status(404).json({ error: 'Grupo no encontrado o no autorizado' });
+    }
+
+    // Obtener moderadores
+    const moderatorIds = Array.isArray(group.moderators_ids) 
+      ? group.moderators_ids 
+      : [];
+    
+    const moderators = moderatorIds.length > 0
+      ? await prisma.user.findMany({
+        where: { 
+          id: { in: moderatorIds },
+          is_moderator: true 
+        },
+        select: { 
+          id: true, 
+          first_name: true, 
+          last_name: true, 
+          email: true,
+          role: true
+        }
+      })
+      : [];
+
+    res.json({
+      ...group,
+      moderators
+    });
+  } catch (error) {
+    console.log('ERROR GET /groups/my-groups/:id:', error);
+    res.status(500).json({ error: 'No se pudo obtener el grupo' });
+  }
+});
+
+// DELETE /groups/my-groups/:id - Eliminar un grupo que represento
+router.delete('/my-groups/:id', checkJwt, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    // Encontrar el usuario por auth0_id
+    const requestingUser = await prisma.user.findUnique({ 
+      where: { auth0_id: req.auth.sub } 
+    });
+
+    // Verificar que el usuario es representante
+    if (!requestingUser || !requestingUser.is_representative) {
+      return res.status(403).json({ error: 'Requiere ser representante' });
+    }
+
+    // Verificar que el grupo pertenece al representante
+    const group = await prisma.group.findUnique({ 
+      where: { 
+        id,
+        repre_id: requestingUser.id 
+      }
+    });
+
+    if (!group) {
+      return res.status(404).json({ error: 'Grupo no encontrado o no autorizado' });
+    }
+
+    // Verificar si el grupo tiene eventos asociados
+    const eventCount = await prisma.eventRequest.count({
+      where: { group_id: id }
+    });
+
+    if (eventCount > 0) {
+      return res.status(409).json({ 
+        error: `No se puede eliminar: el grupo tiene ${eventCount} eventos asociados` 
+      });
+    }
+    
+    // Eliminar el grupo
+    await prisma.group.delete({ where: { id } });
+    res.status(204).end();
+  } catch (error) {
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Grupo no encontrado' });
+    }
+    console.log('ERROR DELETE /groups/my-groups/:id:', error);
+    res.status(500).json({ error: 'No se pudo eliminar el grupo' });
+  }
+});
+
+router.patch('/my-groups/design-moderators/:id', checkJwt, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { moderators } = req.body;
+
+    // Validar ID del grupo
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    // Validar que moderadores sea un array
+    if (!Array.isArray(moderators)) {
+      return res.status(400).json({ error: 'Moderadores debe ser un array' });
+    }
+
+    // Encontrar el usuario que hace la solicitud
+    const requestingUser = await prisma.user.findUnique({ 
+      where: { auth0_id: req.auth.sub } 
+    });
+
+    // Verificar que el usuario es representante
+    if (!requestingUser || !requestingUser.is_representative) {
+      return res.status(403).json({ error: 'Requiere ser representante' });
+    }
+
+    // Verificar que el grupo pertenece al representante
+    const group = await prisma.group.findUnique({ 
+      where: { 
+        id,
+        repre_id: requestingUser.id 
+      }
+    });
+
+    if (!group) {
+      return res.status(404).json({ error: 'Grupo no encontrado o no autorizado' });
+    }
+
+    await prisma.user.updateMany({
+      where: { 
+        id: { in: moderators },
+        is_moderator: false  // Solo actualiza los que no son moderadores
+      },
+      data: {
+        is_moderator: true
+      }
+    });
+
+    const validModerators = await prisma.user.findMany({
+      where: { 
+        id: { in: moderators },
+        is_moderator: true
+      }
+    });
+
+    // Verificar que todos los IDs proporcionados son moderadores válidos
+    if (validModerators.length !== moderators.length) {
+      return res.status(400).json({ error: 'Algunos moderadores no son válidos' });
+    }
+
+    // Verificar que el representante no esté en la lista de moderadores
+    if (moderators.includes(requestingUser.id)) {
+      return res.status(400).json({ error: 'El representante no puede ser moderador' });
+    }
+
+    // Actualizar grupo con nuevos moderadores
+    const updatedGroup = await prisma.group.update({
+      where: { id },
+      data: {
+        moderators_ids: moderators
+      },
+      include: {
+        groupRequest: true
+      }
+    });
+
+    res.json({
+      message: 'Moderadores actualizados exitosamente',
+      group: updatedGroup
+    });
+
+  } catch (error) {
+    console.error('ERROR al diseñar moderadores:', error);
+    res.status(500).json({ 
+      error: 'No se pudieron actualizar los moderadores',
+      details: error.message
+    });
+  }
+});
+
+router.patch('/my-groups/transfer-representative/:id', checkJwt, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { new_representative_id } = req.body;
+
+    // Validar ID del grupo
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID de grupo inválido' });
+    }
+
+    // Validar ID del nuevo representante
+    if (!Number.isInteger(new_representative_id) || new_representative_id <= 0) {
+      return res.status(400).json({ error: 'ID de representante inválido' });
+    }
+
+    // Encontrar el usuario que hace la solicitud
+    const requestingUser = await prisma.user.findUnique({ 
+      where: { auth0_id: req.auth.sub } 
+    });
+
+    // Verificar que el usuario es representante actual
+    if (!requestingUser || !requestingUser.is_representative) {
+      return res.status(403).json({ error: 'Requiere ser representante' });
+    }
+
+    // Verificar que el grupo pertenece al representante actual
+    const group = await prisma.group.findUnique({ 
+      where: { 
+        id,
+        repre_id: requestingUser.id 
+      }
+    });
+
+    if (!group) {
+      return res.status(404).json({ error: 'Grupo no encontrado o no autorizado' });
+    }
+
+    // Verificar que el nuevo representante es un moderador del grupo
+    const newRepresentative = await prisma.user.findUnique({
+      where: { id: new_representative_id }
+    });
+
+    // Verificar que el nuevo representante existe y es moderador
+    if (!newRepresentative) {
+      return res.status(400).json({ error: 'El nuevo representante no es válido' });
+    }
+
+    // Verificar que el nuevo representante está en la lista de moderadores
+    const moderatorIds = group.moderators_ids || [];
+    if (!moderatorIds.includes(new_representative_id)) {
+      return res.status(400).json({ 
+        error: 'El nuevo representante debe ser un moderador del grupo' 
+      });
+    }
+
+    // Actualizar grupo, removiendo al nuevo representante de la lista de moderadores
+    const updatedGroup = await prisma.group.update({
+      where: { id },
+      data: {
+        repre_id: new_representative_id,
+        moderators_ids: moderatorIds.filter(modId => modId !== new_representative_id)
+      },
+      include: {
+        groupRequest: true
+      }
+    });
+
+    res.json({
+      message: 'Representante transferido exitosamente',
+      group: updatedGroup
+    });
+
+  } catch (error) {
+    console.error('ERROR al transferir representante:', error);
+    res.status(500).json({ 
+      error: 'No se pudo transferir el rol de representante',
+      details: error.message
+    });
   }
 });
 
