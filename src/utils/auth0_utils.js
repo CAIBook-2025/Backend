@@ -57,4 +57,25 @@ async function unblockUserInAuth0(auth0Id) {
   }
 }
 
-module.exports = { getMachineToMachineToken, blockUserInAuth0, unblockUserInAuth0 };
+async function sendChangeAuth0PasswordEmailToUser(userEmail) {
+  try {
+    const response = await fetch(`https://${process.env.AUTH0_DOMAIN}/dbconnections/change_password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        client_id: process.env.AUTH0_CLIENT_ID,
+        email: userEmail,
+        connection: 'Username-Password-Authentication'
+      })
+    });
+    return response;
+  } catch (error) {
+    console.error(`Error sending change password email to ${userEmail}:`, error);
+    throw error;
+  }
+  
+}
+
+module.exports = { getMachineToMachineToken, blockUserInAuth0, unblockUserInAuth0, sendChangeAuth0PasswordEmailToUser };

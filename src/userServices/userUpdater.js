@@ -1,5 +1,6 @@
 const { prisma } = require('../lib/prisma');
 const { NotFoundError, BadRequestError } = require('../utils/appError');
+const { sendChangeAuth0PasswordEmailToUser } = require('../utils/auth0_utils');
 
 class userUpdater {
   async promoteUserToAdmin(user_id) {
@@ -47,6 +48,13 @@ class userUpdater {
     });
 
     return updatedUser;
+  }
+
+  async changeUserPassword(auth0_id) {
+    const user = await prisma.user.findUnique({ where: { auth0_id } });
+    if (!user) throw new NotFoundError('Usuario no encontrado', 'userUpdater.changeUserPassword');
+    const result = sendChangeAuth0PasswordEmailToUser(user.email);
+    return result;
   }
 }
 

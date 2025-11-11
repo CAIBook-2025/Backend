@@ -132,13 +132,23 @@ router.post('/admin/create', checkJwt, async (req, res) => {
 });
 
 // PATCH /users/admin/promote
-router.patch('/admin/promote', checkJwt, checkAdmin, async (req, res) => {
+router.patch('/admin/promote/:id', checkJwt, checkAdmin, async (req, res) => {
   try {
-    const user_id = req.body.user_id;
+    const user_id = Number(req.params.id);
     const result = await userUpdater.promoteUserToAdmin(user_id);
     res.json(result);
   } catch (error) {
     errorHandler.handleControllerError(res, error, 'PATCH /users/admin/promote', 'No se pudo promover al usuario');
+  }
+});
+
+// POST /users/send-change-password-email
+router.post('/send-change-password-email', checkJwt, async (req, res) => {
+  try {
+    const result = await userUpdater.changeUserPassword(req.auth.sub);
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'POST /users/send-change-password-email', 'No se pudo cambiar la contraseña del usuario');
   }
 });
 
