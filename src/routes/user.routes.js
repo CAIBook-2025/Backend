@@ -1,7 +1,11 @@
 const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
 const { checkJwt, checkAdmin } = require('../middleware/auth');
-const usersService = require('../users/usersService');
+// const usersService = require('../users/usersService');
+const userCreator = require('../users/userCreator');
+const userFetcher = require('../users/userFetcher');
+const userUpdater = require('../users/userUpdater');
+const userDeleter = require('../users/userDeleter');
 
 const router = Router();
 
@@ -29,7 +33,7 @@ router.get('/', checkJwt, checkAdmin, async (req, res) => {
 // POST /users
 router.post('/', checkJwt, async (req, res) => {
   try {
-    const result = await usersService.createUserInOwnDB(req.body);
+    const result = await userCreator.createUserInOwnDB(req.body);
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR POST /users:', error);
@@ -40,7 +44,7 @@ router.post('/', checkJwt, async (req, res) => {
 // GET /users/profile
 router.get('/profile', checkJwt, async (req, res) => {
   try {
-    const result = await usersService.getUserProfile(req.auth.sub);
+    const result = await userFetcher.getUserProfile(req.auth.sub);
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR GET /users/profile:', error);
@@ -68,7 +72,7 @@ router.get('/check', checkJwt, async (req, res) => {
 // GET /users/:id
 router.get('/:id', checkJwt, async (req, res) => {
   try {
-    const result = await usersService.getUserById(Number(req.params.id));
+    const result = await userFetcher.getUserById(Number(req.params.id));
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR GET /users/:id:', error);
@@ -79,7 +83,7 @@ router.get('/:id', checkJwt, async (req, res) => {
 // PATCH /users/profile
 router.patch('/profile', checkJwt, async (req, res) => {
   try {
-    const result = await usersService.updateUser(req.auth.sub, req.body);
+    const result = await userUpdater.updateUser(req.auth.sub, req.body);
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR PATCH /users/:id:', error);
@@ -90,7 +94,7 @@ router.patch('/profile', checkJwt, async (req, res) => {
 // DELETE /users/:id - Fully delete: borra realmente el usuario de la db para limpiarla
 router.delete('/:id', checkJwt, checkAdmin, async (req, res) => {
   try {
-    const result = await usersService.deleteUserById(Number(req.params.id));
+    const result = await userDeleter.deleteUserById(Number(req.params.id));
     res.status(result.status).json(result.body);
   } catch (error) {
     if (error?.code === 'P2025') return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -102,7 +106,7 @@ router.delete('/:id', checkJwt, checkAdmin, async (req, res) => {
 // PATCH /users/admin/delete/:id - Soft delete: marca el usuario como eliminado
 router.patch('/admin/delete/:id', checkJwt, checkAdmin, async (req, res) => {
   try {
-    const result = await usersService.softDeleteUserById(Number(req.params.id));
+    const result = await userDeleter.softDeleteUserById(Number(req.params.id));
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR PATCH /users/admin/delete/:id:', error);
@@ -113,7 +117,7 @@ router.patch('/admin/delete/:id', checkJwt, checkAdmin, async (req, res) => {
 // PATCH /users/admin/restore/:id
 router.patch('/admin/restore/:id', checkJwt, checkAdmin, async (req, res) => {
   try {
-    const result = await usersService.restoreSoftDeletedUserById(Number(req.params.id));
+    const result = await userDeleter.restoreSoftDeletedUserById(Number(req.params.id));
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR PATCH /users/admin/restore/:id:', error);
@@ -124,7 +128,7 @@ router.patch('/admin/restore/:id', checkJwt, checkAdmin, async (req, res) => {
 // PATCH /users/delete/me 
 router.patch('/delete/me', checkJwt, async (req, res) => {
   try {
-    const result = await usersService.softDeleteOwnUser(req.auth.sub);
+    const result = await userDeleter.softDeleteOwnUser(req.auth.sub);
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR PATCH /users/delete/me:', error);
@@ -135,7 +139,7 @@ router.patch('/delete/me', checkJwt, async (req, res) => {
 // GET /users/admin/:id
 router.get('/admin/:id', checkJwt, checkAdmin, async (req, res) => {
   try {
-    const result = await usersService.getUserByIdBeingAdmin(Number(req.params.id), req.auth.sub);
+    const result = await userFetcher.getUserByIdBeingAdmin(Number(req.params.id), req.auth.sub);
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR GET /users/admin/:id:', error);
@@ -146,7 +150,7 @@ router.get('/admin/:id', checkJwt, checkAdmin, async (req, res) => {
 // POST /users/admin/create
 router.post('/admin/create', checkJwt, async (req, res) => {
   try {
-    const adminUser = await usersService.createAdminUser(req.body);
+    const adminUser = await userCreator.createAdminUser(req.body);
     res.status(201).json(adminUser);
   } catch (error) {
     console.log('ERROR POST /users/admin-creation:', error);
@@ -158,7 +162,7 @@ router.post('/admin/create', checkJwt, async (req, res) => {
 router.patch('/admin/promote', checkJwt, checkAdmin, async (req, res) => {
   try {
     const user_id = req.body.user_id;
-    const result = await usersService.promoteUserToAdmin(user_id);
+    const result = await userUpdater.promoteUserToAdmin(user_id);
     res.status(result.status).json(result.body);
   } catch (error) {
     console.log('ERROR PATCH /users/admin/promote:', error);
