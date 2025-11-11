@@ -1,37 +1,26 @@
 const { prisma } = require('../lib/prisma');
 const { getMachineToMachineToken } = require('../utils/auth0_utils');
 const crypto = require('crypto');
+const { BadRequestError } = require('../utils/appError');
 
 class UserCreator {
   async createUserInOwnDB(userData) {
-    try {
-      const existingUser = await prisma.user.findUnique({ 
-        where: { auth0_id: userData.auth0_id },
-      });
+    const existingUser = await prisma.user.findUnique({ 
+      where: { auth0_id: userData.auth0_id },
+    });
 
-      if (existingUser) {
-        return {
-          status: 400,
-          body: { error: 'El usuario ya existe en la base de datos.' }
-        };
-      }
-
-      const user = await prisma.user.create({
-        data: {
-          ...userData,
-          role: 'STUDENT' // rol default
-        }
-      });
-
-      return {
-        status: 200,
-        body: user
-      };
-
-    } catch (error) {
-      console.error('Error creating user in own DB:', error);
-      throw error;
+    if (existingUser) {
+      throw new BadRequestError('El usuario ya existe en la base de datos.', 'UserCreator.createUserInOwnDB');
     }
+
+    const user = await prisma.user.create({
+      data: {
+        ...userData,
+        role: 'STUDENT' // rol default
+      }
+    });
+
+    return user;
   }
 
   async createAdminUser(createAdminUserRequestData) {

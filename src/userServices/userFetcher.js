@@ -1,91 +1,47 @@
 const { prisma } = require('../lib/prisma');
+const { ForbiddenError, NotFoundError } = require('../utils/appError');
 
 class UserFetcher {
+  async getAllUsers(takeQuery, pageQuery) {
+    const take = Math.min(Math.max(takeQuery || 20, 1), 100);
+    const page = Math.max(pageQuery || 1, 1);
+    const skip = (page - 1) * take;
+
+    const [items, total] = await Promise.all([
+      prisma.user.findMany({ take, skip, orderBy: { id: 'asc' } }),
+      prisma.user.count()
+    ]);
+    return { page, take, total, items };
+  }
+
   async getUserById(id) {
-    try {
-      const user = await prisma.user.findUnique({ where: { id } });
-
-      if (!user) {
-        return {
-          status: 404,
-          body: { error: 'Usuario no encontrado' }
-        };
-      }
-
-      const completeUserProfileData = await this.getUserCompleteProfileData(user);
-
-      return {
-        status: 200,
-        body: completeUserProfileData
-      };
-
-    } catch (error) {
-      console.error('Error al obtener usuario por ID:', error);
-      return {
-        status: 500,
-        body: { error: 'Error interno del servidor.' }
-      };
-    }
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundError('Usuario no encontrado', 'UserFetcher.getUserById');
+    const completeUserProfileData = await this.getUserCompleteProfileData(user);
+    return completeUserProfileData;
   }
 
   async getUserByIdBeingAdmin(id, admin_auth0_id) {
-    try {
-      if (!admin_auth0_id) {
-        return {
-          status: 403,
-          body: { error: 'No tienes permisos para acceder a este recurso.' }
-        };
-      }
-
-      const user = await prisma.user.findUnique({ where: { id } });
-      if (!user) {
-        return {
-          status: 404,
-          body: { error: 'Usuario no encontrado' }
-        };
-      }
-
-      const completeUserProfileData = await this.getUserCompleteProfileData(user);
-
-      return {
-        status: 200,
-        body: completeUserProfileData
-      };
-    } catch (error) {
-      console.error('Error al obtener usuario por ID siendo admin:', error);
-      return {
-        status: 500,
-        body: { error: 'Error interno del servidor.' }
-      };
+    if (!admin_auth0_id) {
+      throw new ForbiddenError('UserFetcher.getUserByIdBeingAdmin');
     }
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundError('Usuario no encontrado', 'UserFetcher.getUserByIdBeingAdmin');
+    }
+    const completeUserProfileData = await this.getUserCompleteProfileData(user);
+    return completeUserProfileData;
   }
 
   async getUserProfile( auth0_id ) {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { auth0_id: auth0_id }
-      });
-
-      if (!user) {
-        return {
-          status: 404,
-          body: { error: 'Usuario no encontrado' }
-        };
-      }
-
-      const completeUserProfileData = await this.getUserCompleteProfileData(user);
-
-      return {
-        status: 200,
-        body: completeUserProfileData
-      };
-    } catch (error) {
-      console.error('Error al obtener el perfil del usuario:', error);
-      return {
-        status: 500,
-        body: { error: 'Error interno del servidor.' }
-      };
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: auth0_id }
+    });
+    if (!user) {
+      throw new NotFoundError('Usuario no encontrado', 'UserFetcher.getUserProfile');
     }
+    const completeUserProfileData = await this.getUserCompleteProfileData(user);
+    return completeUserProfileData;
   }
 
   async getUserCompleteProfileData(user) {
