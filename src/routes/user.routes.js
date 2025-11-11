@@ -25,7 +25,7 @@ router.get('/', checkJwt, checkAdmin, async (req, res) => {
 router.post('/', checkJwt, async (req, res) => {
   try {
     const result = await userCreator.createUserInOwnDB(req.body);
-    res.json(result);
+    res.status(201).json(result);
   } catch (error) {
     errorHandler.handleControllerError(res, error, 'POST /users', 'No se pudo crear el usuario');
   }
@@ -125,7 +125,7 @@ router.get('/admin/:id', checkJwt, checkAdmin, async (req, res) => {
 router.post('/admin/create', checkJwt, async (req, res) => {
   try {
     const adminUser = await userCreator.createAdminUser(req.body);
-    res.json(adminUser);
+    res.status(201).json(adminUser);
   } catch (error) {
     errorHandler.handleControllerError(res, error, 'POST /users/admin/create', 'No se pudo crear el usuario administrador');
   }
