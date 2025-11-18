@@ -9,21 +9,20 @@ datasource db {
 
 model User {
   id                Int            @id @default(autoincrement())
-  email             String         @unique
+  auth0_id          String         @unique
   first_name        String
   last_name         String
-  role              UserRole       @default(STUDENT)
+  email             String         @unique
+  phone             String
+  student_number    String
+  career            String
   is_representative Boolean        @default(false)
-  is_moderator      Boolean        @default(false)
+  role              UserRole       @default(STUDENT)
   is_deleted        Boolean        @default(false)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
-  deletedAt         DateTime       @default(now())
-  auth0_id          String         @unique
-  career            String
-  phone             String
-  student_number    String
-  attendance        Attendance[]
+  deletedAt        DateTime?
+  feedback          Feedback[]
   groupRequests     GroupRequest[]
   srScheduling      SRScheduling[]
   strikesByAdmin    Strike[]       @relation("StrikeAdmin")
@@ -32,14 +31,16 @@ model User {
 
 model GroupRequest {
   id          Int           @id @default(autoincrement())
+  user_id     Int
   name        String
   goal        String
   description String?
   logo        String?
   status      RequestStatus @default(PENDING)
+  is_deleted  Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  user_id     Int
+  deletedAt        DateTime?
   group       Group?        @relation("GroupFromRequest")
   user        User          @relation(fields: [user_id], references: [id])
 
@@ -48,12 +49,13 @@ model GroupRequest {
 
 model Group {
   id               Int            @id @default(autoincrement())
-  reputation       Decimal        @default(0.0) @db.Decimal(3, 2)
-  repre_id         Int
   group_request_id Int            @unique
-  moderators_ids   Json           @default("[]")
+  repre_id         Int
+  reputation       Decimal        @default(0.0) @db.Decimal(3, 2)
+  is_deleted       Boolean        @default(false)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
   eventRequests    EventRequest[]
   groupRequest     GroupRequest   @relation("GroupFromRequest", fields: [group_request_id], references: [id])
 }
@@ -63,10 +65,10 @@ model Strike {
   student_id  Int
   description String?
   date        DateTime   @default(now())
+  type        StrikeType
   admin_id    Int
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  type        StrikeType
   admin       User       @relation("StrikeAdmin", fields: [admin_id], references: [id])
   student     User       @relation("StrikeStudent", fields: [student_id], references: [id])
 
@@ -75,15 +77,15 @@ model Strike {
 
 model SRScheduling {
   id        Int                @id @default(autoincrement())
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  sr_id     Int
+  user_id   Int?
+  day       DateTime
+  module    Int
   available AvailabilityStatus @default(AVAILABLE)
   status    AttendanceStatus      @default(PENDING)
   is_finished Boolean         @default(false)
-  day       DateTime
-  module    Int
-  sr_id     Int
-  user_id   Int?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
   studyRoom StudyRoom?          @relation(fields: [sr_id], references: [id])
   user      User?               @relation(fields: [user_id], references: [id])
 
@@ -94,41 +96,27 @@ model SRScheduling {
 model StudyRoom {
   id        Int            @id @default(autoincrement())
   name      String         @unique
+  location  String
+  equipment Json           @default("[]")
   capacity  Int
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
-  equipment Json           @default("[]")
-  location  String
   schedules SRScheduling[]
 }
 
-model Attendance {
+model Feedback {
   id         Int              @id @default(autoincrement())
   event_id   Int
   student_id Int
-  status  AttendanceStatus @default(PENDING)
   rating     Decimal?         @db.Decimal(2, 1)
-  feedback   String?
+  comment    String?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
-  event      EventsScheduling @relation(fields: [event_id], references: [id])
+  event      EventRequest     @relation(fields: [event_id], references: [id])
   student    User             @relation(fields: [student_id], references: [id])
 
   @@unique([student_id, event_id])
   @@index([student_id, event_id])
-}
-
-model EventsScheduling {
-  id               Int          @id @default(autoincrement())
-  event_request_id Int
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  end_time         DateTime
-  start_time       DateTime
-  attendance       Attendance[]
-  eventRequest     EventRequest @relation(fields: [event_request_id], references: [id])
-
-  @@index([event_request_id, start_time])
 }
 
 model EventRequest {
@@ -138,15 +126,16 @@ model EventRequest {
   name             String
   goal             String
   description      String?
-  status           RequestStatus      @default(PENDING)
-  n_attendees      Int
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
   day              DateTime
   module           Int
+  status           RequestStatus      @default(PENDING)
+  is_deleted       Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  deletedAt        DateTime?
   group            Group              @relation(fields: [group_id], references: [id])
   publicSpace      PublicSpace        @relation(fields: [public_space_id], references: [id])
-  eventsScheduling EventsScheduling[]
+  feedback         Feedback[]
 
   @@index([group_id, status])
 }
