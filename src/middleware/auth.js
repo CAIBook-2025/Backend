@@ -1,6 +1,7 @@
 const { expressjwt: jwt } = require('express-jwt');
 const jwksRsa = require('jwks-rsa');
 const { prisma } = require('../lib/prisma');
+const { ForbiddenError } = require('../utils/appError');
 
 const checkJwt = jwt({
   secret: jwksRsa.expressJwtSecret({
@@ -14,26 +15,25 @@ const checkJwt = jwt({
 });
 
 const checkAdmin = async (req, res, next) => {
-  console.log('Checking admin role for user:', req.auth);
-  const user = await prisma.user.findUnique({ 
-    where: { auth0_id: req.auth.sub },
-  });
-   
-  if (!user) {
-    return res.status(403).json({ 
-      error: 'Acceso denegado: no se encontró el usuario en la base de datos.',
-      mensaje: 'Debes tener una cuenta válida para acceder a este recurso.' 
+  try {
+    const user = await prisma.user.findUnique({ 
+      where: { auth0_id: req.auth.sub },
     });
+    
+    if (!user) {
+      throw new ForbiddenError('Acceso denegado: no se encontró el usuario en la base de datos.', 'checkAdmin.middleware');
+    }
+
+    if (user.role !== 'ADMIN') {
+      throw new ForbiddenError('Acceso denegado: el usuario no es un administrador.', 'checkAdmin.middleware');
+    }
+
+    next();
+  } catch (error) {
+    console.log('ERROR en middleware checkAdmin:\n', error);
+    return res.status(error.status || 500).json({ error: error.message || 'Error interno del servidor.' });
   }
 
-  if (user.role !== 'ADMIN') {
-    return res.status(403).json({ 
-      error: 'Acceso denegado: el usuario no es un administrador.',
-      mensaje: 'Debes tener privilegios de administrador para acceder a este recurso.' 
-    });
-  }
-
-  next();
 };
 
 module.exports = { checkJwt, checkAdmin };
