@@ -37,7 +37,6 @@ class UserFetcher {
     const user = await prisma.user.findUnique({
       where: { auth0_id: auth0_id }
     });
-    console.log(user);
     if (!user) {
       throw new NotFoundError('Usuario no encontrado', 'UserFetcher.getUserProfile');
     }
@@ -46,18 +45,17 @@ class UserFetcher {
   }
 
   async getUserCompleteProfileData(user) {
-    console.log(user);
-    const [schedules, strikes] = await Promise.all([
+    const [schedules, strikes, activeSchedules, pendingGroupRequests] = await Promise.all([
       this.getUserSchedules(user),
       this.getUserStrikes(user),
+      this.getCurrentUserSchedules(user),
+      this.getUserGroupRequests(user)
       // this.getUserAttendances(user)
     ]);
 
-    console.log(schedules)
-
     // const upcomingEvents = await this.filterUpcomingEvents(attendances);
     const reservasActivas = await this.filterActiveReservations(schedules);
-    const completeData = await this.formatCompleteUserProfileData(user, reservasActivas, strikes);
+    const completeData = await this.formatCompleteUserProfileData(user, reservasActivas, strikes, activeSchedules.length, pendingGroupRequests.length);
     
     return completeData;
   }
@@ -72,6 +70,14 @@ class UserFetcher {
     });
   }
 
+  async getCurrentUserSchedules(user) {
+    return prisma.SRScheduling.findMany({
+      where: { user_id: user.id, is_finished: false },
+      include: { studyRoom: true },
+      orderBy: [{ day: 'asc' }, { module: 'asc' }],
+    })
+  }
+
   async getUserStrikes(user) {
     // Strikes recibidos por el estudiante
     return prisma.strike.findMany({
@@ -79,6 +85,12 @@ class UserFetcher {
       orderBy: { date: 'desc' },
     });
 
+  }
+
+  async getUserGroupRequests(user) {
+    return prisma.GroupRequest.findMany({
+      where: { user_id: user.id, status: 'PENDING' },
+    });
   }
 
   // async getUserAttendances(user) {
@@ -124,7 +136,7 @@ class UserFetcher {
     return reservasActivas;
   }
 
-  async formatCompleteUserProfileData(user, activeReservations, strikes, 
+  async formatCompleteUserProfileData(user, activeReservations, strikes, activeSchedules, pendingGroupRequests
     // attendances, 
     // upcomingEvents
     ) {
@@ -134,6 +146,8 @@ class UserFetcher {
       scheduleCount: activeReservations.length,
       strikes,
       strikesCount: strikes.length,
+      activeSchedules,
+      pendingGroupRequests
       // upcomingEvents,
       // upcomingEventsCount: upcomingEvents.length,
       // attendances,
