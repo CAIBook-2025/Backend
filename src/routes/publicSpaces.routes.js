@@ -71,7 +71,7 @@ router.get('/:id', async (req, res) => {
             name: true,
             day: true,
             module: true,
-            n_attendees: true,
+            // n_attendees: true,
             group: {
               select: {
                 id: true,
@@ -188,7 +188,7 @@ router.get('/:id/availability', async (req, res) => {
           id: event.id,
           name: event.name,
           group_name: event.group.groupRequest.name,
-          n_attendees: event.n_attendees
+          // n_attendees: event.n_attendees
         };
       }
     });

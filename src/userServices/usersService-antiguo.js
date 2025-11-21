@@ -87,7 +87,7 @@ class UsersService {
           last_name: 'actualizar',
           role: 'ADMIN',
           is_representative: false,
-          is_moderator: false,
+          // is_moderator: false,
           career: 'admin cai',
           phone: '1',
           student_number: '1',

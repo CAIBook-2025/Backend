@@ -37,6 +37,7 @@ class UserFetcher {
     const user = await prisma.user.findUnique({
       where: { auth0_id: auth0_id }
     });
+    console.log(user);
     if (!user) {
       throw new NotFoundError('Usuario no encontrado', 'UserFetcher.getUserProfile');
     }
@@ -45,22 +46,26 @@ class UserFetcher {
   }
 
   async getUserCompleteProfileData(user) {
-    const [schedules, strikes, attendances] = await Promise.all([
+    console.log(user);
+    const [schedules, strikes] = await Promise.all([
       this.getUserSchedules(user),
       this.getUserStrikes(user),
-      this.getUserAttendances(user)
+      // this.getUserAttendances(user)
     ]);
 
-    const upcomingEvents = await this.filterUpcomingEvents(attendances);
+    console.log(schedules)
+
+    // const upcomingEvents = await this.filterUpcomingEvents(attendances);
     const reservasActivas = await this.filterActiveReservations(schedules);
-    const completeData = await this.formatCompleteUserProfileData(user, reservasActivas, strikes, attendances, upcomingEvents);
+    const completeData = await this.formatCompleteUserProfileData(user, reservasActivas, strikes);
     
     return completeData;
   }
 
   async getUserSchedules(user) {
     // Reservas de salas del usuario (SRScheduling) + sala
-    return prisma.sRScheduling.findMany({
+
+    return prisma.SRScheduling.findMany({
       where: { user_id: user.id }, // "activas" = desde hoy
       include: { studyRoom: true },
       orderBy: [{ day: 'asc' }, { module: 'asc' }],
@@ -76,34 +81,34 @@ class UserFetcher {
 
   }
 
-  async getUserAttendances(user) {
-    // Asistencias del usuario a eventos (+ evento y + solicitud del evento para el nombre)
-    return prisma.attendance.findMany({
-      where: { student_id: user.id },
-      include: {
-        event: {                    // EventsScheduling
-          include: { eventRequest: true }, // para obtener "name", "goal", etc.
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+  // async getUserAttendances(user) {
+  //   // Asistencias del usuario a eventos (+ evento y + solicitud del evento para el nombre)
+  //   return prisma.attendance.findMany({
+  //     where: { student_id: user.id },
+  //     include: {
+  //       event: {                    // EventsScheduling
+  //         include: { eventRequest: true }, // para obtener "name", "goal", etc.
+  //       },
+  //     },
+  //     orderBy: { createdAt: 'desc' },
+  //   });
+  // }
 
-  async filterUpcomingEvents(userAttendances) {
-    const now = new Date();
-    const upcomingEvents = userAttendances
-      .filter(a => a.event?.start_time && a.event.start_time >= now)
-      .map(a => ({
-        id: a.event.id,
-        title: a.event.eventRequest?.name ?? 'Evento',
-        start: a.event.start_time,
-        end: a.event.end_time,
-        status: 'DISPONIBLE',
-      }))
-      .sort((a, b) => +new Date(a.start) - +new Date(b.start));
+  // async filterUpcomingEvents(userAttendances) {
+  //   const now = new Date();
+  //   const upcomingEvents = userAttendances
+  //     .filter(a => a.event?.start_time && a.event.start_time >= now)
+  //     .map(a => ({
+  //       id: a.event.id,
+  //       title: a.event.eventRequest?.name ?? 'Evento',
+  //       start: a.event.start_time,
+  //       end: a.event.end_time,
+  //       status: 'DISPONIBLE',
+  //     }))
+  //     .sort((a, b) => +new Date(a.start) - +new Date(b.start));
 
-    return upcomingEvents;
-  }
+  //   return upcomingEvents;
+  // }
 
   async filterActiveReservations(userSchedules) {
     const reservasActivas = userSchedules.map(s => ({
@@ -119,17 +124,20 @@ class UserFetcher {
     return reservasActivas;
   }
 
-  async formatCompleteUserProfileData(user, activeReservations, strikes, attendances, upcomingEvents) {
+  async formatCompleteUserProfileData(user, activeReservations, strikes, 
+    // attendances, 
+    // upcomingEvents
+    ) {
     const completeData = {
       user,
       schedule: activeReservations,
       scheduleCount: activeReservations.length,
       strikes,
       strikesCount: strikes.length,
-      upcomingEvents,
-      upcomingEventsCount: upcomingEvents.length,
-      attendances,
-      attendancesCount: attendances.length
+      // upcomingEvents,
+      // upcomingEventsCount: upcomingEvents.length,
+      // attendances,
+      // attendancesCount: attendances.length
     };
     return completeData;
   }
