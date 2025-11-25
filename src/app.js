@@ -10,7 +10,7 @@ const schedulesRouter = require('./routes/schedule.routes');
 const strikesRouter = require('./routes/strikes.routes');
 const attendanceRouter = require('./routes/attendance.routes');
 const groupsRouter = require('./routes/groups.routes');
-const eventsRouter = require('./routes/events.routes');
+// const eventsRouter = require('./routes/events.routes');
 const publicSpacesRouter = require('./routes/publicSpaces.routes');
 const eventRequestsRouter = require('./routes/eventRequests.routes');
 const groupRequestsRouter = require('./routes/groupRequests.routes');
@@ -36,9 +36,8 @@ app.get('/', (_req, res) => {
 
 // Routers
 app.use('/api/groups', groupsRouter);
-app.use('/api/events', eventsRouter);
 app.use('/api/public-spaces', publicSpacesRouter);
-app.use('/api/event-requests', eventRequestsRouter);
+app.use('/api/events', eventRequestsRouter);
 app.use('/api/group-requests', groupRequestsRouter);
 app.use('/api/users', userRouter);
 app.use('/api/sRooms', roomsRouter);

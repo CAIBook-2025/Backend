@@ -7,7 +7,7 @@ const router = Router();
 // Constantes
 const VALID_REQUEST_STATUS = ['PENDING', 'CONFIRMED', 'CANCELLED'];
 
-// GET /event-requests - Listar solicitudes de eventos
+// GET /events - Listar solicitudes de eventos
 router.get('/', checkJwt, async (req, res) => {
   try {
     // Filtros opcionales
@@ -51,13 +51,6 @@ router.get('/', checkJwt, async (req, res) => {
             available: true 
           }
         },
-        eventsScheduling: {
-          select: { 
-            id: true, 
-            start_time: true, 
-            end_time: true 
-          }
-        }
       }
     });
 
@@ -78,7 +71,6 @@ router.get('/', checkJwt, async (req, res) => {
         reputation: item.group.reputation
       },
       public_space: item.publicSpace,
-      event_scheduled: item.eventsScheduling.length > 0 ? item.eventsScheduling[0] : null,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt
     }));
@@ -90,7 +82,7 @@ router.get('/', checkJwt, async (req, res) => {
   }
 });
 
-// GET /event-requests/:id - Obtener solicitud específica
+// GET /events/:id - Obtener solicitud específica
 router.get('/:id', checkJwt, async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -129,19 +121,6 @@ router.get('/:id', checkJwt, async (req, res) => {
             available: true 
           }
         },
-        eventsScheduling: {
-          include: {
-            attendance: {
-              select: { 
-                id: true, 
-                student_id: true, 
-                status: true,
-                rating: true,
-                feedback: true
-              }
-            }
-          }
-        }
       }
     });
     
@@ -209,22 +188,15 @@ router.get('/:id', checkJwt, async (req, res) => {
   }
 });
 
-// POST /event-requests - Crear solicitud de evento
+// POST /events - Crear solicitud de evento
 router.post('/', checkJwt, async (req, res) => {
   try {
-    const { group_id, public_space_id, name, goal, description, day, module, n_attendees } = req.body;
+    const { group_id, public_space_id, name, goal, description, day, module } = req.body;
     
     // Validación de campos requeridos
-    if (!group_id || !public_space_id || !name || !goal || !day || module === undefined || !n_attendees) {
+    if (!group_id || !public_space_id || !name || !goal || !day || module === undefined || !description) {
       return res.status(400).json({ 
-        error: 'group_id, public_space_id, name, goal, day, module y n_attendees son requeridos' 
-      });
-    }
-
-    // Validar n_attendees
-    if (!Number.isInteger(n_attendees) || n_attendees <= 0) {
-      return res.status(400).json({ 
-        error: 'n_attendees debe ser un número entero positivo' 
+        error: 'group_id, public_space_id, name, goal, day y module son requeridos' 
       });
     }
 
@@ -270,12 +242,11 @@ router.post('/', checkJwt, async (req, res) => {
       ? group.moderators_ids 
       : [];
     const isRepresentative = user.id === group.repre_id;
-    const isModerator = moderatorIds.includes(user.id);
     const isAdmin = user.role === 'ADMIN';
 
-    if (!isRepresentative && !isModerator && !isAdmin) {
+    if (!isRepresentative && !isAdmin) {
       return res.status(403).json({ 
-        error: 'Solo el representante, moderadores del grupo o administradores pueden crear solicitudes' 
+        error: 'Solo el representante o administradores pueden crear solicitudes' 
       });
     }
 
@@ -294,10 +265,17 @@ router.post('/', checkJwt, async (req, res) => {
       });
     }
 
-    // Validar capacidad
-    if (publicSpace.capacity && n_attendees > publicSpace.capacity) {
-      return res.status(400).json({ 
-        error: `El espacio tiene capacidad para ${publicSpace.capacity} personas, pero solicitas ${n_attendees}` 
+    // Verificar que el usuario no tenga otra solicitud pendiente
+    const existingPendingRequest = await prisma.eventRequest.findFirst({
+      where: {
+        group_id,
+        status: 'PENDING'
+      }
+    });
+
+    if (existingPendingRequest.length == 3) {
+      return res.status(409).json({ 
+        error: 'Ya tienes tres solicitudes de grupo pendientes' 
       });
     }
 
@@ -326,7 +304,6 @@ router.post('/', checkJwt, async (req, res) => {
         description: description || null,
         day: eventDay,
         module,
-        n_attendees,
         status: 'PENDING'
       },
       include: {
