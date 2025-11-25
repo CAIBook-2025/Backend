@@ -337,7 +337,80 @@ router.post('/', checkJwt, async (req, res) => {
   }
 });
 
-// PATCH /event-requests/:id - Actualizar solicitud (cambiar status principalmente)
+
+
+// DELETE /event-requests/:id - Eliminar solicitud
+router.delete('/:id', checkJwt, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    // Obtener la solicitud
+    const eventRequest = await prisma.eventRequest.findUnique({
+      where: { id },
+      include: { group: true }
+    });
+
+    if (!eventRequest) {
+      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
+    }
+
+    // Obtener usuario autenticado
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub }
+    });
+
+    // Verificar permisos
+    const moderatorIds = Array.isArray(eventRequest.group.moderators_ids) 
+      ? eventRequest.group.moderators_ids 
+      : [];
+    const isRepresentative = user.id === eventRequest.group.repre_id;
+    const isModerator = moderatorIds.includes(user.id);
+    const isAdmin = user.role === 'ADMIN';
+
+    if (!isRepresentative && !isModerator && !isAdmin) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    // No permitir eliminar si ya está confirmada (solo admin puede)
+    if (eventRequest.status === 'CONFIRMED' && !isAdmin) {
+      return res.status(403).json({ 
+        error: 'No se puede eliminar una solicitud confirmada. Solo administradores pueden hacerlo.' 
+      });
+    }
+
+    // Verificar si tiene eventos programados
+    const schedulingCount = await prisma.eventsScheduling.count({
+      where: { event_request_id: id }
+    });
+
+    if (schedulingCount > 0 && !isAdmin) {
+      return res.status(409).json({ 
+        error: 'No se puede eliminar: la solicitud tiene eventos programados' 
+      });
+    }
+    
+    await prisma.eventRequest.delete({ where: { id } });
+    res.status(204).end();
+  } catch (error) {
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
+    }
+    if (error?.code === 'P2003') {
+      return res.status(409).json({ 
+        error: 'No se puede eliminar: solicitud tiene registros asociados' 
+      });
+    }
+    console.log('ERROR DELETE /event-requests/:id:', error);
+    res.status(500).json({ error: 'No se pudo eliminar la solicitud de evento' });
+  }
+});
+
+
+// ADMIN CAI
+// PATCH /events/:id - Actualizar solicitud (cambiar status principalmente)
 router.patch('/:id', checkJwt, async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -420,15 +493,6 @@ router.patch('/:id', checkJwt, async (req, res) => {
           }
         });
 
-        // Crear EventsScheduling
-        await tx.eventsScheduling.create({
-          data: {
-            event_request_id: id,
-            start_time: startTime,
-            end_time: endTime
-          }
-        });
-
         return updatedRequest;
       });
 
@@ -501,75 +565,6 @@ router.patch('/:id', checkJwt, async (req, res) => {
     }
     console.log('ERROR PATCH /event-requests/:id:', error);
     res.status(500).json({ error: 'No se pudo actualizar la solicitud de evento' });
-  }
-});
-
-// DELETE /event-requests/:id - Eliminar solicitud
-router.delete('/:id', checkJwt, async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      return res.status(400).json({ error: 'ID inválido' });
-    }
-
-    // Obtener la solicitud
-    const eventRequest = await prisma.eventRequest.findUnique({
-      where: { id },
-      include: { group: true }
-    });
-
-    if (!eventRequest) {
-      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
-    }
-
-    // Obtener usuario autenticado
-    const user = await prisma.user.findUnique({
-      where: { auth0_id: req.auth.sub }
-    });
-
-    // Verificar permisos
-    const moderatorIds = Array.isArray(eventRequest.group.moderators_ids) 
-      ? eventRequest.group.moderators_ids 
-      : [];
-    const isRepresentative = user.id === eventRequest.group.repre_id;
-    const isModerator = moderatorIds.includes(user.id);
-    const isAdmin = user.role === 'ADMIN';
-
-    if (!isRepresentative && !isModerator && !isAdmin) {
-      return res.status(403).json({ error: 'No autorizado' });
-    }
-
-    // No permitir eliminar si ya está confirmada (solo admin puede)
-    if (eventRequest.status === 'CONFIRMED' && !isAdmin) {
-      return res.status(403).json({ 
-        error: 'No se puede eliminar una solicitud confirmada. Solo administradores pueden hacerlo.' 
-      });
-    }
-
-    // Verificar si tiene eventos programados
-    const schedulingCount = await prisma.eventsScheduling.count({
-      where: { event_request_id: id }
-    });
-
-    if (schedulingCount > 0 && !isAdmin) {
-      return res.status(409).json({ 
-        error: 'No se puede eliminar: la solicitud tiene eventos programados' 
-      });
-    }
-    
-    await prisma.eventRequest.delete({ where: { id } });
-    res.status(204).end();
-  } catch (error) {
-    if (error?.code === 'P2025') {
-      return res.status(404).json({ error: 'Solicitud de evento no encontrada' });
-    }
-    if (error?.code === 'P2003') {
-      return res.status(409).json({ 
-        error: 'No se puede eliminar: solicitud tiene registros asociados' 
-      });
-    }
-    console.log('ERROR DELETE /event-requests/:id:', error);
-    res.status(500).json({ error: 'No se pudo eliminar la solicitud de evento' });
   }
 });
 
