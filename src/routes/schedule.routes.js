@@ -3,6 +3,13 @@ const { prisma } = require('../lib/prisma');
 
 const router = Router();
 // const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
+function addDays(date, days) {
+  const d = new Date(date);
+  console.log("previos date", d)
+  d.setDate(d.getDate() + days);
+  console.log("new date", d)
+  return d;
+}
 
 // GET /schedules?srId=&date=YYYY-MM-DD&page=&take=
 router.get('/', async (req, res) => {
@@ -14,7 +21,6 @@ router.get('/', async (req, res) => {
     const where = {};
 
     const date = new Date(`${String(req.query.day)}T00:00:00.000Z`);
-    console.log(date);
 
     if (req.query.day) {
       const dateStr = String(req.query.day);
@@ -38,6 +44,8 @@ router.get('/', async (req, res) => {
       }),
       prisma.sRScheduling.count({ where })
     ]);
+
+    console.log(total)
 
     res.json({ page, take, total, items });
   } catch (error) {
@@ -311,7 +319,6 @@ router.patch('/checkout', async (req, res) => {
   }
 });
 
-
 // DELETE /schedules/:id
 router.delete('/:id', async (req, res) => {
   try {
@@ -327,6 +334,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// ENDPOINTS DE ADMIN
 // PATCH /schedules/enable
 router.patch('/enable', async (req, res) => {
   try {
@@ -431,6 +439,32 @@ router.patch('/cancel/admin', async (req, res) => {
   } catch (error) {
     console.log('ERROR PATCH /schedules/cancel:', error);
     return res.status(500).json({ error: 'No se pudo cancelar la reserva' });
+  }
+});
+
+// PATCH /schedules/refresh
+router.patch('/refresh', async (ctx) => {
+  console.log('>>> [refresh] Inicio handler SIMPLE');
+  try {
+    const updated = await prisma.$executeRaw`
+      UPDATE "public"."SRScheduling"
+      SET "day" = "day" + INTERVAL '7 days'
+      WHERE 1=1
+    `;
+
+    console.log('>>> [refresh] Filas actualizadas =', updated);
+
+    ctx.status = 200;
+    ctx.body = {
+      ok: true,
+      message: 'Reservas movidas 7 días hacia adelante',
+      updatedCount: Number(updated),
+    };
+    console.log('>>> [refresh] Respuesta enviada OK (SIMPLE)');
+  } catch (err) {
+    console.error('>>> [refresh] ERROR SIMPLE:', err);
+    ctx.status = 500;
+    ctx.body = { error: 'Error al refrescar las salas de estudio' };
   }
 });
 
