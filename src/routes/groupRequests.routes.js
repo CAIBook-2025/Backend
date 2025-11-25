@@ -328,7 +328,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
             data: {
               repre_id: existingRequest.user_id,
               group_request_id: id,
-              moderators_ids: [],
+              // moderators_ids: [],
               reputation: 0.0
             }
           });
