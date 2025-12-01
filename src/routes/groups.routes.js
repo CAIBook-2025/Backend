@@ -108,8 +108,7 @@ router.get('/', async (req, res) => {
             goal: true,
             status: true,
             day: true,
-            module: true,
-            n_attendees: true
+            module: true
           }
         }
       }

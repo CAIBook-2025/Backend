@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
+const { checkJwt } = require('../middleware/auth');
 
 const router = Router();
 
@@ -31,16 +32,25 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /strikes
-router.post('/', async (req, res) => {
+router.post('/', checkJwt, async (req, res) => {
   try {
-    const { student_id, description, date, type, admin_id } = req.body || {};
-    if (!student_id || !type || !admin_id) {
-      return res.status(400).json({ error: 'student_id, type, admin_id son requeridos' });
+    const requestingUser = await prisma.user.findUnique({ 
+      where: { auth0_id: req.auth.sub } 
+    });
+
+    // Verificar que el usuario es admin
+    if (!requestingUser || requestingUser.role != "ADMIN") {
+      return res.status(403).json({ error: 'Requiere ser  Admin' });
+    }
+    const { student_id, description, date, type} = req.body || {};
+    if (!student_id || !type) {
+      return res.status(400).json({ error: 'student_id, type, son requeridos' });
     }
 
     const created = await prisma.strike.create({
       data: {
-        student_id, type, admin_id,
+        student_id, type,
+        admin_id: requestingUser.id,
         description: description ?? null,
         date: date ? new Date(date) : undefined
       }
@@ -71,8 +81,17 @@ router.patch('/:id', async (req, res) => {
 });
 
 // DELETE /strikes/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', checkJwt, async (req, res) => {
   try {
+    const requestingUser = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub }
+    });
+
+    // Verificar que el usuario es admin
+    if (!requestingUser || requestingUser.role != "ADMIN") {
+      return res.status(403).json({ error: 'Requiere ser Admin' });
+    }
+    
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
 
