@@ -1,5 +1,5 @@
-const { prisma } = require('../lib/prisma');
-const { ForbiddenError, NotFoundError } = require('../utils/appError');
+const { prisma } = require('../../lib/prisma');
+const { ForbiddenError, NotFoundError } = require('../../utils/appError');
 
 class UserFetcher {
   async getAllUsers(takeQuery, pageQuery) {
@@ -75,7 +75,7 @@ class UserFetcher {
       where: { user_id: user.id, is_finished: false },
       include: { studyRoom: true },
       orderBy: [{ day: 'asc' }, { module: 'asc' }],
-    })
+    });
   }
 
   async getUserStrikes(user) {
@@ -139,7 +139,7 @@ class UserFetcher {
   async formatCompleteUserProfileData(user, activeReservations, strikes, activeSchedules, pendingGroupRequests
     // attendances, 
     // upcomingEvents
-    ) {
+  ) {
     const completeData = {
       user,
       schedule: activeReservations,

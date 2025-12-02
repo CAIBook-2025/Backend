@@ -1,6 +1,6 @@
-const { prisma } = require('../lib/prisma');
-const { NotFoundError, BadRequestError } = require('../utils/appError');
-const { sendChangeAuth0PasswordEmailToUser } = require('../utils/auth0_utils');
+const { prisma } = require('../../lib/prisma');
+const { NotFoundError, BadRequestError } = require('../../utils/appError');
+const { sendChangeAuth0PasswordEmailToUser } = require('../../utils/auth0_utils');
 
 class userUpdater {
   async promoteUserToAdmin(user_id) {

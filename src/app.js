@@ -16,6 +16,7 @@ const eventRequestsRouter = require('./routes/eventRequests.routes');
 const groupRequestsRouter = require('./routes/groupRequests.routes');
 const userRouter = require('./routes/user.routes');
 const historyRouter = require('./routes/history.routes');
+const eventFeedbackRouter = require('./routes/eventFeedback.routes');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/srSchedule', schedulesRouter);
 app.use('/api/strikes', strikesRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/history', historyRouter);
+app.use('/api/event-feedback', eventFeedbackRouter);
 
 // JWT error handler
 app.use((err, _req, res, _next) => {

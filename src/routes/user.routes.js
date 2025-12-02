@@ -1,10 +1,10 @@
 const { Router } = require('express');
 const { checkJwt, checkAdmin } = require('../middleware/auth');
-const userCreator = require('../userServices/userCreator');
-const userFetcher = require('../userServices/userFetcher');
-const userUpdater = require('../userServices/userUpdater');
-const userDeleter = require('../userServices/userDeleter');
-const userChecker = require('../userServices/userChecker');
+const userCreator = require('../services/userServices/userCreator');
+const userFetcher = require('../services//userServices/userFetcher');
+const userUpdater = require('../services//userServices/userUpdater');
+const userDeleter = require('../services//userServices/userDeleter');
+const userChecker = require('../services//userServices/userChecker');
 const errorHandler = require('../utils/errorHandler');
 
 const router = Router();
