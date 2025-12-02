@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { checkJwt } = require('../middleware/auth');
+const { checkJwt, checkAdmin } = require('../middleware/auth');
 const eventFeedbackService = require('../eventFeedbackServices/eventFeedbackService');
 const errorHandler = require('../utils/errorHandler');
 
@@ -57,6 +57,15 @@ router.post('/', checkJwt, async (req, res) => {
 });
 
 // PATCH /event-feedback/:eventFeedbackId
+router.patch('/:eventFeedbackId', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    const feedbackData = req.body;
+    const result = await eventFeedbackService.updateEventFeedback(Number(req.params.eventFeedbackId), feedbackData);
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'PATCH /event-feedback/:eventFeedbackId', 'No se pudo actualizar el feedback del evento');
+  }
+});
 
 // DELETE /event-feedback/:eventFeedbackId
 
