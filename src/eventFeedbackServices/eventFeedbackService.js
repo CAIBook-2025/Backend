@@ -307,12 +307,68 @@ class EventFeedbackService {
     });
   }
 
-  async deleteEventFeedback(eventFeedbackId) {
+  async deleteEventFeedbackByStudent(eventFeedbackId, student_auth0_id) {
+    const student = await prisma.user.findUnique({
+      where: { auth0_id: student_auth0_id },
+      select: { id: true },
+    });
+    if (!student) {
+      throw new NotFoundError('Estudiante no encontrado', 'EventFeedbackService.deleteEventFeedbackByStudent');
+    }
+    const sanitizedStudentId = student.id;
+
     const existingFeedback = await prisma.feedback.findUnique({
       where: { id: eventFeedbackId },
     });
     if (!existingFeedback) {
-      throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.deleteEventFeedback');
+      throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.deleteEventFeedbackByStudent');
+    }
+    if (existingFeedback.student_id !== sanitizedStudentId) {
+      throw new BadRequestError('No se puede eliminar el feedback de otro estudiante', 'EventFeedbackService.deleteEventFeedbackByStudent');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.feedback.delete({
+        where: { id: eventFeedbackId },
+      });
+
+      const sanitizedEventId = existingFeedback.event_id;
+
+      const event = await tx.eventRequest.findUnique({
+        where: { id: sanitizedEventId },
+      });
+      const sanitizedGroupId = event.group_id;
+
+      const eventsOfGroup = await tx.eventRequest.findMany({
+        where: { group_id: sanitizedGroupId },
+        select: { id: true },
+      });
+      const eventIds = eventsOfGroup.map(event => event.id);
+
+      const aggregateAvg = await tx.feedback.aggregate({
+        where: { event_id: { in: eventIds } },
+        _avg: {
+          rating: true,
+        },
+      });
+
+      const averageRating = aggregateAvg._avg.rating ? aggregateAvg._avg.rating.toFixed(1) : 0;
+
+      await tx.group.update({
+        where: { id: sanitizedGroupId },
+        data: { 
+          reputation: averageRating ? new Prisma.Decimal(averageRating) : 0
+        },
+      });
+    });
+  }
+
+  async deleteEventFeedbackByAdmin(eventFeedbackId) {
+    const existingFeedback = await prisma.feedback.findUnique({
+      where: { id: eventFeedbackId },
+    });
+    if (!existingFeedback) {
+      throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.deleteEventFeedbackByAdmin');
     }
     await prisma.$transaction(async (tx) => {
       await tx.feedback.delete({

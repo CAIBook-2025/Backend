@@ -93,10 +93,21 @@ router.patch('/admin/:eventFeedbackId', checkJwt, checkAdmin, async (req, res) =
 // DELETE /event-feedback/:eventFeedbackId
 router.delete('/:eventFeedbackId', checkJwt, async (req, res) => {
   try {
-    await eventFeedbackService.deleteEventFeedback(Number(req.params.eventFeedbackId));
+    const student_auth0_id = req.auth.sub;
+    await eventFeedbackService.deleteEventFeedbackByStudent(Number(req.params.eventFeedbackId), student_auth0_id);
     res.status(204).send();
   } catch (error) {
     errorHandler.handleControllerError(res, error, 'DELETE /event-feedback/:eventFeedbackId', 'No se pudo eliminar el feedback del evento');
+  }
+});
+
+// DELETE /event-feedback/admin/:eventFeedbackId
+router.delete('/admin/:eventFeedbackId', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    await eventFeedbackService.deleteEventFeedbackByAdmin(Number(req.params.eventFeedbackId));
+    res.status(204).send();
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'DELETE /event-feedback/admin/:eventFeedbackId', 'No se pudo eliminar el feedback del evento por admin');
   }
 });
 
