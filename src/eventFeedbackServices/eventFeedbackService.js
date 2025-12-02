@@ -314,9 +314,6 @@ class EventFeedbackService {
     if (!existingFeedback) {
       throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.deleteEventFeedback');
     }
-    // await prisma.feedback.delete({
-    //   where: { id: eventFeedbackId },
-    // });
     await prisma.$transaction(async (tx) => {
       await tx.feedback.delete({
         where: { id: eventFeedbackId },
