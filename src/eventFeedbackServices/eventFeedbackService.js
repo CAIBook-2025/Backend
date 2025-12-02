@@ -61,6 +61,18 @@ class EventFeedbackService {
   async createEventFeedback(feedbackData) {
     const { event_id, student_id, rating, comment } = feedbackData;
 
+    if (event_id === undefined) {
+      throw new BadRequestError('El ID del evento es obligatorio', 'EventFeedbackService.createEventFeedback');
+    } 
+
+    if (student_id === undefined) {
+      throw new BadRequestError('El ID del estudiante es obligatorio', 'EventFeedbackService.createEventFeedback');
+    }
+    
+    if (rating === undefined) {
+      throw new BadRequestError('La calificación es obligatoria', 'EventFeedbackService.createEventFeedback');
+    }
+
     const sanitizedEventId = Number(event_id);
     if (!Number.isInteger(sanitizedEventId) || sanitizedEventId <= 0) {
       throw new BadRequestError('El ID del evento es inválido', 'EventFeedbackService.createEventFeedback');
@@ -120,6 +132,16 @@ class EventFeedbackService {
     });
   }
 
+  // async updateEventFeedback(eventFeedbackId, feedbackData) {
+  //   const existingFeedback = await prisma.feedback.findUnique({
+  //     where: { id: eventFeedbackId },
+  //   });
+  //   if (!existingFeedback) {
+  //     throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.updateEventFeedback');
+  //   }
+
+  //   const { rating, comment } = feedbackData;
+  // }
 }
 
 module.exports = new EventFeedbackService();
