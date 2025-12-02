@@ -1,6 +1,6 @@
+const { prisma } = require('../../lib/prisma');
 const { Prisma } = require('@prisma/client');
-const { prisma } = require('../lib/prisma');
-const { NotFoundError, BadRequestError, ConflictError } = require('../utils/appError');
+const { NotFoundError, BadRequestError, ConflictError } = require('../../utils/appError');
 
 class EventFeedbackService {
 

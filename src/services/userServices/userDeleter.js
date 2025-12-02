@@ -1,6 +1,6 @@
-const { prisma } = require('../lib/prisma');
-const { blockUserInAuth0, unblockUserInAuth0 } = require('../utils/auth0_utils');
-const { NotFoundError } = require('../utils/appError');
+const { prisma } = require('../../lib/prisma');
+const { blockUserInAuth0, unblockUserInAuth0 } = require('../../utils/auth0_utils');
+const { NotFoundError } = require('../../utils/appError');
 
 
 class UserDeleter {

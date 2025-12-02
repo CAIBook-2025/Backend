@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { checkJwt, checkAdmin } = require('../middleware/auth');
-const eventFeedbackService = require('../eventFeedbackServices/eventFeedbackService');
+const eventFeedbackService = require('../services/eventFeedbackServices/eventFeedbackService');
 const errorHandler = require('../utils/errorHandler');
 
 const router = Router();
