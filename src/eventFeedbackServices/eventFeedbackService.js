@@ -314,8 +314,42 @@ class EventFeedbackService {
     if (!existingFeedback) {
       throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.deleteEventFeedback');
     }
-    await prisma.feedback.delete({
-      where: { id: eventFeedbackId },
+    // await prisma.feedback.delete({
+    //   where: { id: eventFeedbackId },
+    // });
+    await prisma.$transaction(async (tx) => {
+      await tx.feedback.delete({
+        where: { id: eventFeedbackId },
+      });
+
+      const sanitizedEventId = existingFeedback.event_id;
+
+      const event = await tx.eventRequest.findUnique({
+        where: { id: sanitizedEventId },
+      });
+      const sanitizedGroupId = event.group_id;
+
+      const eventsOfGroup = await tx.eventRequest.findMany({
+        where: { group_id: sanitizedGroupId },
+        select: { id: true },
+      });
+      const eventIds = eventsOfGroup.map(event => event.id);
+
+      const aggregateAvg = await tx.feedback.aggregate({
+        where: { event_id: { in: eventIds } },
+        _avg: {
+          rating: true,
+        },
+      });
+
+      const averageRating = aggregateAvg._avg.rating ? aggregateAvg._avg.rating.toFixed(1) : 0;
+
+      await tx.group.update({
+        where: { id: sanitizedGroupId },
+        data: { 
+          reputation: averageRating ? new Prisma.Decimal(averageRating) : 0
+        },
+      });
     });
   }
 }
