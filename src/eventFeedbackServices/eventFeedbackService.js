@@ -171,6 +171,18 @@ class EventFeedbackService {
       data: updateData,
     });
   }
+
+  async deleteEventFeedback(eventFeedbackId) {
+    const existingFeedback = await prisma.feedback.findUnique({
+      where: { id: eventFeedbackId },
+    });
+    if (!existingFeedback) {
+      throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.deleteEventFeedback');
+    }
+    await prisma.feedback.delete({
+      where: { id: eventFeedbackId },
+    });
+  }
 }
 
 module.exports = new EventFeedbackService();
