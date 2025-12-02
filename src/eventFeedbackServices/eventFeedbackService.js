@@ -62,16 +62,12 @@ class EventFeedbackService {
     return eventFeedbacksOfStudent;
   }
 
-  async createEventFeedback(feedbackData) {
-    const { event_id, student_id, rating, comment } = feedbackData;
+  async createEventFeedback(feedbackData, student_auth0_id) {
+    const { event_id, rating, comment } = feedbackData;
 
     if (event_id === undefined) {
       throw new BadRequestError('El ID del evento es obligatorio', 'EventFeedbackService.createEventFeedback');
     } 
-
-    if (student_id === undefined) {
-      throw new BadRequestError('El ID del estudiante es obligatorio', 'EventFeedbackService.createEventFeedback');
-    }
     
     if (rating === undefined) {
       throw new BadRequestError('La calificación es obligatoria', 'EventFeedbackService.createEventFeedback');
@@ -81,11 +77,6 @@ class EventFeedbackService {
     if (!Number.isInteger(sanitizedEventId) || sanitizedEventId <= 0) {
       throw new BadRequestError('El ID del evento es inválido', 'EventFeedbackService.createEventFeedback');
     }
-
-    const sanitizedStudentId = Number(student_id);
-    if (!Number.isInteger(sanitizedStudentId) || sanitizedStudentId <= 0) {
-      throw new BadRequestError('El ID del estudiante es inválido', 'EventFeedbackService.createEventFeedback');
-    }
         
     const eventExists = await prisma.eventRequest.findUnique({
       where: { id: sanitizedEventId },
@@ -94,12 +85,14 @@ class EventFeedbackService {
       throw new NotFoundError('Evento no encontrado', 'EventFeedbackService.createEventFeedback');
     }
 
-    const studentExists = await prisma.user.findUnique({
-      where: { id: sanitizedStudentId },
+    const student = await prisma.user.findUnique({
+      where: { auth0_id: student_auth0_id },
+      select: { id: true },
     });
-    if (!studentExists) {
+    if (!student) {
       throw new NotFoundError('Estudiante no encontrado', 'EventFeedbackService.createEventFeedback');
     }
+    const sanitizedStudentId = student.id;
 
     const eventFeedbackOfStudentOfThisEvent = await prisma.feedback.findFirst({
       where: {

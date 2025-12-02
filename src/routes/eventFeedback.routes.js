@@ -59,7 +59,8 @@ router.get('/user/:userId', checkJwt, async (req, res) => {
 router.post('/', checkJwt, async (req, res) => {
   try {
     const feedbackData = req.body;
-    const result = await eventFeedbackService.createEventFeedback(feedbackData);
+    const student_auth0_id = req.auth.sub;
+    const result = await eventFeedbackService.createEventFeedback(feedbackData, student_auth0_id);
     res.status(201).json(result);
   } catch (error) {
     errorHandler.handleControllerError(res, error, 'POST /event-feedback', 'No se pudo crear el feedback del evento');
