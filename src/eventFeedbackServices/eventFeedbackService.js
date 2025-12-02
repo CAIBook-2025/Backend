@@ -4,6 +4,10 @@ const { NotFoundError, BadRequestError, ConflictError } = require('../utils/appE
 
 class EventFeedbackService {
 
+  async getAllEventFeedback() {
+    return await prisma.feedback.findMany();
+  }
+
   async getEventFeedbackById(eventFeedbackId) {
     const eventFeedback = await prisma.feedback.findUnique({
       where: { id: eventFeedbackId },

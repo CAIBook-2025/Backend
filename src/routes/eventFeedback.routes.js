@@ -5,6 +5,16 @@ const errorHandler = require('../utils/errorHandler');
 
 const router = Router();
 
+// GET /event-feedback
+router.get('/', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    const result = await eventFeedbackService.getAllEventFeedback();
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'GET /event-feedback', 'No se pudo obtener los feedbacks de los eventos');
+  }
+});
+
 // GET /event-feedback/:eventFeedbackId
 router.get('/:eventFeedbackId', checkJwt, async (req, res) => {
   try {
