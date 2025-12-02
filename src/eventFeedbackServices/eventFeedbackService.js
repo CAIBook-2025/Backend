@@ -121,14 +121,6 @@ class EventFeedbackService {
 
     const sanitizedGroupId = eventExists.group_id;
 
-    // return await prisma.feedback.create({
-    //   data: {
-    //     event_id: sanitizedEventId,
-    //     student_id: sanitizedStudentId,
-    //     rating: sanitizedRating,
-    //     comment: sanitizedComment,
-    //   },
-    // });
     return await prisma.$transaction(async (tx) => {
       const createdFeedback = await tx.feedback.create({
         data: {
@@ -166,7 +158,88 @@ class EventFeedbackService {
     });
   }
 
-  async updateEventFeedback(eventFeedbackId, feedbackData) {
+  async updateOwnEventFeedback(eventFeedbackId, feedbackData, student_auth0_id) {
+    const student = await prisma.user.findUnique({
+      where: { auth0_id: student_auth0_id },
+      select: { id: true },
+    });
+    if (!student) {
+      throw new NotFoundError('Estudiante no encontrado', 'EventFeedbackService.updateOwnEventFeedback');
+    }
+    const sanitizedStudentId = student.id;
+
+    const existingFeedback = await prisma.feedback.findUnique({
+      where: { id: eventFeedbackId },
+    });
+    if (!existingFeedback) {
+      throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.updateOwnEventFeedback');
+    }
+    if (existingFeedback.student_id !== sanitizedStudentId) {
+      throw new BadRequestError('No se puede actualizar el feedback de otro estudiante', 'EventFeedbackService.updateOwnEventFeedback');
+    }
+
+    const { rating, comment } = feedbackData;
+    const updateData = {};
+
+    if (rating !== undefined) {
+      const numericRating = Number(rating);
+
+      if (!Number.isFinite(numericRating)) {
+        throw new BadRequestError('La calificación debe ser un número válido', 'EventFeedbackService.updateEventFeedback');
+      }
+
+      if (numericRating < 1.0 || numericRating > 5.0) {
+        throw new BadRequestError('La calificación debe estar entre 1 y 5', 'EventFeedbackService.updateEventFeedback');
+      }
+
+      updateData.rating = new Prisma.Decimal(numericRating.toFixed(1));
+    }
+
+    if (comment !== undefined) {
+      if (comment === null || (typeof comment === 'string' && comment.trim() === '')) {
+        updateData.comment = null;
+      } else if (typeof comment === 'string') {
+        updateData.comment = comment.trim();
+      } else {
+        throw new BadRequestError('El comentario debe ser una cadena de texto o nulo', 'EventFeedbackService.updateEventFeedback');
+      }
+    }
+
+    const sanitizedGroupId = existingFeedback.event_id;
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedFeedback = await tx.feedback.update({
+        where: { id: eventFeedbackId },
+        data: updateData,
+      });
+
+      const eventsOfGroup = await tx.eventRequest.findMany({
+        where: { group_id: sanitizedGroupId },
+        select: { id: true },
+      });
+      const eventIds = eventsOfGroup.map(event => event.id);
+
+      const aggregateAvg = await tx.feedback.aggregate({
+        where: { event_id: { in: eventIds } },
+        _avg: {
+          rating: true,
+        },
+      });
+
+      const averageRating = aggregateAvg._avg.rating ? aggregateAvg._avg.rating.toFixed(1) : 0;
+
+      await tx.group.update({
+        where: { id: sanitizedGroupId },
+        data: { 
+          reputation: averageRating ? new Prisma.Decimal(averageRating) : 0
+        },
+      });
+
+      return updatedFeedback;
+    });
+  }
+
+  async updateAdminEventFeedback(eventFeedbackId, feedbackData) {
     const existingFeedback = await prisma.feedback.findUnique({
       where: { id: eventFeedbackId },
     });
@@ -200,9 +273,37 @@ class EventFeedbackService {
       }
     }
 
-    return await prisma.feedback.update({
-      where: { id: eventFeedbackId },
-      data: updateData,
+    const sanitizedGroupId = existingFeedback.event_id;
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedFeedback = await tx.feedback.update({
+        where: { id: eventFeedbackId },
+        data: updateData,
+      });
+
+      const eventsOfGroup = await tx.eventRequest.findMany({
+        where: { group_id: sanitizedGroupId },
+        select: { id: true },
+      });
+      const eventIds = eventsOfGroup.map(event => event.id);
+
+      const aggregateAvg = await tx.feedback.aggregate({
+        where: { event_id: { in: eventIds } },
+        _avg: {
+          rating: true,
+        },
+      });
+
+      const averageRating = aggregateAvg._avg.rating ? aggregateAvg._avg.rating.toFixed(1) : 0;
+
+      await tx.group.update({
+        where: { id: sanitizedGroupId },
+        data: { 
+          reputation: averageRating ? new Prisma.Decimal(averageRating) : 0
+        },
+      });
+
+      return updatedFeedback;
     });
   }
 

@@ -68,10 +68,22 @@ router.post('/', checkJwt, async (req, res) => {
 });
 
 // PATCH /event-feedback/:eventFeedbackId
-router.patch('/:eventFeedbackId', checkJwt, checkAdmin, async (req, res) => {
+router.patch('/:eventFeedbackId', checkJwt, async (req, res) => {
   try {
     const feedbackData = req.body;
-    const result = await eventFeedbackService.updateEventFeedback(Number(req.params.eventFeedbackId), feedbackData);
+    const student_auth0_id = req.auth.sub;
+    const result = await eventFeedbackService.updateOwnEventFeedback(Number(req.params.eventFeedbackId), feedbackData, student_auth0_id);
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'PATCH /event-feedback/:eventFeedbackId', 'No se pudo actualizar el feedback del evento');
+  }
+});
+
+// PATCH /event-feedback/admin/:eventFeedbackId
+router.patch('/admin/:eventFeedbackId', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    const feedbackData = req.body;
+    const result = await eventFeedbackService.updateAdminEventFeedback(Number(req.params.eventFeedbackId), feedbackData);
     res.json(result);
   } catch (error) {
     errorHandler.handleControllerError(res, error, 'PATCH /event-feedback/:eventFeedbackId', 'No se pudo actualizar el feedback del evento');
