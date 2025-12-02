@@ -36,8 +36,25 @@ router.get('/group/:groupId', checkJwt, async (req, res) => {
 });
 
 // GET /event-feedback/user/:userId
+router.get('/user/:userId', checkJwt, async (req, res) => {
+  try {
+    const result = await eventFeedbackService.getEventFeedbackByUserId(Number(req.params.userId));
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'GET /event-feedback/user/:userId', 'No se pudo obtener el feedback del evento por userId');
+  }
+});
 
 // POST /event-feedback
+router.post('/', checkJwt, async (req, res) => {
+  try {
+    const feedbackData = req.body;
+    const result = await eventFeedbackService.createEventFeedback(feedbackData);
+    res.status(201).json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'POST /event-feedback', 'No se pudo crear el feedback del evento');
+  }
+});
 
 // PATCH /event-feedback/:eventFeedbackId
 
