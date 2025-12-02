@@ -119,13 +119,50 @@ class EventFeedbackService {
 
     const sanitizedComment = typeof comment === 'string' && comment.trim() !== '' ? comment.trim() : null;
 
-    return await prisma.feedback.create({
-      data: {
-        event_id: sanitizedEventId,
-        student_id: sanitizedStudentId,
-        rating: sanitizedRating,
-        comment: sanitizedComment,
-      },
+    const sanitizedGroupId = eventExists.group_id;
+
+    // return await prisma.feedback.create({
+    //   data: {
+    //     event_id: sanitizedEventId,
+    //     student_id: sanitizedStudentId,
+    //     rating: sanitizedRating,
+    //     comment: sanitizedComment,
+    //   },
+    // });
+    return await prisma.$transaction(async (tx) => {
+      const createdFeedback = await tx.feedback.create({
+        data: {
+          event_id: sanitizedEventId,
+          student_id: sanitizedStudentId,
+          rating: sanitizedRating,
+          comment: sanitizedComment,
+        },
+      });
+
+      const eventsOfGroup = await tx.eventRequest.findMany({
+        where: { group_id: sanitizedGroupId },
+        select: { id: true },
+      });
+      const eventIds = eventsOfGroup.map(event => event.id);
+
+      const aggregateAvg = await tx.feedback.aggregate({
+        where: { event_id: { in: eventIds } },
+        _avg: {
+          rating: true,
+        },
+      });
+
+      const averageRating = aggregateAvg._avg.rating ? aggregateAvg._avg.rating.toFixed(1) : 0;
+
+      await tx.group.update({
+        where: { id: sanitizedGroupId },
+        data: { 
+          reputation: averageRating ? new Prisma.Decimal(averageRating) : 0
+        },
+      });
+
+      return createdFeedback;
+
     });
   }
 
