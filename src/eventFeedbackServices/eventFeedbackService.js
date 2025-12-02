@@ -45,11 +45,18 @@ class EventFeedbackService {
     return eventFeedbacksOfGroup;
   }
 
-  // async getEventFeedbackByUserId(student_id) {
-  //     return await prisma.eventFeedback.findMany({
-  //         where: { student_id: student_id },
-  //     });
-  // }
+  async getEventFeedbackByUserId(student_id) {
+    const student = await prisma.user.findUnique({
+      where: { id: student_id },
+    });
+    if (!student) {
+      throw new NotFoundError('Estudiante no encontrado', 'EventFeedbackService.getEventFeedbackByUserId');
+    }
+    const eventFeedbacksOfStudent = await prisma.feedback.findMany({
+      where: { student_id: student_id },
+    });
+    return eventFeedbacksOfStudent;
+  }
 
   async createEventFeedback(feedbackData) {
     const { event_id, student_id, rating, comment } = feedbackData;
