@@ -27,11 +27,23 @@ class EventFeedbackService {
     return eventFeedbacksOfEvent;
   }
 
-  // async getEventFeedbackByGroupId(groupId) {
-  //     return await prisma.eventFeedback.findMany({
-  //         where: { groupId: groupId },
-  //     });
-  // }
+  async getEventFeedbackByGroupId(group_id) {
+    const group = await prisma.group.findUnique({
+      where: { id: group_id },
+    });
+    if (!group) {
+      throw new NotFoundError('Grupo no encontrado', 'EventFeedbackService.getEventFeedbackByGroupId');
+    }
+    const eventsOfGroup = await prisma.eventRequest.findMany({
+      where: { group_id: group_id },
+      select: { id: true },
+    });
+    const eventIds = eventsOfGroup.map(event => event.id);
+    const eventFeedbacksOfGroup = await prisma.feedback.findMany({
+      where: { event_id: { in: eventIds } },
+    });
+    return eventFeedbacksOfGroup;
+  }
 
   // async getEventFeedbackByUserId(student_id) {
   //     return await prisma.eventFeedback.findMany({
