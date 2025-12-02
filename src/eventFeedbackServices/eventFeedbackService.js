@@ -14,11 +14,18 @@ class EventFeedbackService {
     return eventFeedback;
   }
 
-  // async getEventFeedbackByEventId(event_id) {
-  //     return await prisma.eventFeedback.findMany({
-  //         where: { event_id: event_id },
-  //     });
-  // }
+  async getEventFeedbackByEventId(event_id) {
+    const event = await prisma.eventRequest.findUnique({
+      where: { id: event_id },
+    });
+    if (!event) {
+      throw new NotFoundError('Evento no encontrado', 'EventFeedbackService.getEventFeedbackByEventId');
+    }
+    const eventFeedbacksOfEvent = await prisma.feedback.findMany({
+      where: { event_id: event_id },
+    });
+    return eventFeedbacksOfEvent;
+  }
 
   // async getEventFeedbackByGroupId(groupId) {
   //     return await prisma.eventFeedback.findMany({
