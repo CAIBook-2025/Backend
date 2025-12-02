@@ -4,11 +4,15 @@ const { NotFoundError, BadRequestError, ConflictError } = require('../utils/appE
 
 class EventFeedbackService {
 
-  // async getEventFeedbackById(eventFeedbackId) {
-  //     return await prisma.eventFeedback.findUnique({
-  //         where: { id: eventFeedbackId },
-  //     });
-  // }
+  async getEventFeedbackById(eventFeedbackId) {
+    const eventFeedback = await prisma.feedback.findUnique({
+      where: { id: eventFeedbackId },
+    });
+    if (!eventFeedback) {
+      throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.getEventFeedbackById');
+    }
+    return eventFeedback;
+  }
 
   // async getEventFeedbackByEventId(event_id) {
   //     return await prisma.eventFeedback.findMany({
