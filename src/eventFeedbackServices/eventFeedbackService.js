@@ -132,16 +132,45 @@ class EventFeedbackService {
     });
   }
 
-  // async updateEventFeedback(eventFeedbackId, feedbackData) {
-  //   const existingFeedback = await prisma.feedback.findUnique({
-  //     where: { id: eventFeedbackId },
-  //   });
-  //   if (!existingFeedback) {
-  //     throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.updateEventFeedback');
-  //   }
+  async updateEventFeedback(eventFeedbackId, feedbackData) {
+    const existingFeedback = await prisma.feedback.findUnique({
+      where: { id: eventFeedbackId },
+    });
+    if (!existingFeedback) {
+      throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.updateEventFeedback');
+    }
+    const { rating, comment } = feedbackData;
+    const updateData = {};
 
-  //   const { rating, comment } = feedbackData;
-  // }
+    if (rating !== undefined) {
+      const numericRating = Number(rating);
+
+      if (!Number.isFinite(numericRating)) {
+        throw new BadRequestError('La calificación debe ser un número válido', 'EventFeedbackService.updateEventFeedback');
+      }
+
+      if (numericRating < 1.0 || numericRating > 5.0) {
+        throw new BadRequestError('La calificación debe estar entre 1 y 5', 'EventFeedbackService.updateEventFeedback');
+      }
+
+      updateData.rating = new Prisma.Decimal(numericRating.toFixed(1));
+    }
+
+    if (comment !== undefined) {
+      if (comment === null || (typeof comment === 'string' && comment.trim() === '')) {
+        updateData.comment = null;
+      } else if (typeof comment === 'string') {
+        updateData.comment = comment.trim();
+      } else {
+        throw new BadRequestError('El comentario debe ser una cadena de texto o nulo', 'EventFeedbackService.updateEventFeedback');
+      }
+    }
+
+    return await prisma.feedback.update({
+      where: { id: eventFeedbackId },
+      data: updateData,
+    });
+  }
 }
 
 module.exports = new EventFeedbackService();
