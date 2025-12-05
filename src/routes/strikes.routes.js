@@ -129,4 +129,42 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// GET /strikes/student/:id
+router.get('/student/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+  
+    const student = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Estudiante no encontrado' });
+    }
+
+    const strikes = await prisma.strike.findMany({
+      where: { 
+        student_id: id 
+      },
+      orderBy: { date: 'desc' },
+      include: {
+        student: true,
+        admin: true
+      }
+    });
+
+    res.json(strikes);
+  } catch (error) {
+    console.log('ERROR GET /strikes/student/:id:', error);
+    res.status(500).json({ error: 'No se pudo obtener los strikes del estudiante' });
+  }
+});
+
+
 module.exports = router;
+
+
