@@ -198,7 +198,7 @@ router.post('/', checkJwt, async (req, res) => {
       }
     });
 
-    if (existingPendingRequest.length == 3) {
+    if (existingPendingRequest?.length == 3) {
       return res.status(409).json({ 
         error: 'Ya tienes tres solicitudes de grupo pendientes' 
       });
@@ -299,9 +299,9 @@ router.patch('/:id', checkJwt, async (req, res) => {
           where: { id: existingRequest.user_id }
         });
 
-        if (!requestingUser.is_representative) {
+        if (!requestingUser) {
           return res.status(400).json({ 
-            error: 'El usuario solicitante debe tener el rol de representante para aprobar el grupo' 
+            error: 'Usuario no autenticado' 
           });
         }
 

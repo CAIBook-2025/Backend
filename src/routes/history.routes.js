@@ -693,9 +693,9 @@ router.get('/representative/events-created', checkJwt, async (req, res) => {
     }
 
     // Verificar que sea representante
-    if (!user.is_representative) {
+    if (!user) {
       return res.status(403).json({ 
-        error: 'Solo los representantes pueden ver el historial de eventos creados' 
+        error: 'No se encontró al usuario' 
       });
     }
 
@@ -877,9 +877,9 @@ router.get('/representative/study-rooms', checkJwt, async (req, res) => {
     }
 
     // Verificar que sea representante
-    if (!user.is_representative) {
+    if (!user) {
       return res.status(403).json({ 
-        error: 'Solo los representantes pueden ver su historial de salas de estudio' 
+        error: 'Usuario no autenticado' 
       });
     }
 

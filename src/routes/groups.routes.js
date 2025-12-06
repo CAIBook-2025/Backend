@@ -33,8 +33,8 @@ router.get('/my-groups', checkJwt, async (req, res) => {
     console.log('Usuario encontrado:', requestingUser);
 
     // Verificar que el usuario es representante
-    if (!requestingUser || !requestingUser.is_representative) {
-      return res.status(403).json({ error: 'Requiere ser representante' });
+    if (!requestingUser) {
+      return res.status(403).json({ error: 'No se encontró al usuario' });
     }
 
     // Buscar grupos donde el usuario es representante
@@ -227,7 +227,7 @@ router.get('/:id', async (req, res) => {
           last_name: true, 
           email: true,
           role: true,
-          is_representative: true,
+          // is_representative: true,
           // // is_moderator: true
         }
       })
@@ -291,11 +291,11 @@ router.post('/', checkJwt, async (req, res) => {
 
     console.log(representative);
 
-    if (!representative.is_representative) {
-      return res.status(400).json({ 
-        error: 'El usuario debe ser representante' 
-      });
-    }
+    // if (!representative.is_representative) {
+    //   return res.status(400).json({ 
+    //     error: 'El usuario debe ser representante' 
+    //   });
+    // }
 
     // Validar que el group_request existe
     const groupRequest = await prisma.groupRequest.findUnique({
@@ -414,19 +414,19 @@ router.patch('/:id', checkJwt, async (req, res) => {
 
     // Verificar permisos: admin, representante del grupo o moderador
     const isAdmin = requestingUser.role === 'ADMIN';
-    const isRepresentative = requestingUser.id === existingGroup.repre_id;
+    // const isRepresentative = requestingUser.id === existingGroup.repre_id;
     // const moderatorIds = Array.isArray(existingGroup.moderators_ids) 
     //   ? existingGroup.moderators_ids 
     //   : [];
-    const isModerator = moderatorIds.includes(requestingUser.id);
+    // const isModerator = moderatorIds.includes(requestingUser.id);
 
-    if (!isAdmin && !isRepresentative && !isModerator) {
+    if (!isAdmin) {
       return res.status(403).json({ error: 'No autorizado' });
     }
 
     // Whitelist de campos editables
     const allowedFields = isAdmin 
-      ?? ['repre_id', 'reputation'] // Representantes y moderadores solo pueden cambiar moderadores
+      ?? ['repre_id', 'reputation']; // Representantes y moderadores solo pueden cambiar moderadores
 
     const dataToUpdate = {};
     
@@ -446,9 +446,9 @@ router.patch('/:id', checkJwt, async (req, res) => {
             where: { id: newRepreId }
           });
           
-          if (!newRepre || !newRepre.is_representative) {
+          if (!newRepre) {
             return res.status(400).json({ 
-              error: 'El nuevo representante debe tener el rol adecuado' 
+              error: 'No se encontró al usuario' 
             });
           }
           
@@ -632,8 +632,8 @@ router.get('/my-groups-id/:id', checkJwt, async (req, res) => {
     });
 
     // Verificar que el usuario es representante
-    if (!requestingUser || !requestingUser.is_representative) {
-      return res.status(403).json({ error: 'Requiere ser representante' });
+    if (!requestingUser) {
+      return res.status(403).json({ error: 'No se encontró al usuario' });
     }
 
     const group = await prisma.group.findUnique({ 
@@ -726,8 +726,8 @@ router.delete('/my-groups/:id', checkJwt, async (req, res) => {
     });
 
     // Verificar que el usuario es representante
-    if (!requestingUser || !requestingUser.is_representative) {
-      return res.status(403).json({ error: 'Requiere ser representante' });
+    if (!requestingUser) {
+      return res.status(403).json({ error: 'No se encontró al usuario' });
     }
 
     // Verificar que el grupo pertenece al representante
@@ -875,8 +875,8 @@ router.patch('/my-groups/transfer-representative/:id', checkJwt, async (req, res
     });
 
     // Verificar que el usuario es representante actual
-    if (!requestingUser || !requestingUser.is_representative) {
-      return res.status(403).json({ error: 'Requiere ser representante' });
+    if (!requestingUser) {
+      return res.status(403).json({ error: 'No se encontró al usuario' });
     }
 
     // Verificar que el grupo pertenece al representante actual
