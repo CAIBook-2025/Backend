@@ -238,9 +238,9 @@ router.post('/', checkJwt, async (req, res) => {
     }
 
     // Verificar que el usuario es representante o moderador del grupo
-    const moderatorIds = Array.isArray(group.moderators_ids) 
-      ? group.moderators_ids 
-      : [];
+    // const moderatorIds = Array.isArray(group.moderators_ids) 
+    //   ? group.moderators_ids 
+    //   : [];
     const isRepresentative = user.id === group.repre_id;
     const isAdmin = user.role === 'ADMIN';
 
@@ -266,16 +266,16 @@ router.post('/', checkJwt, async (req, res) => {
     }
 
     // Verificar que el usuario no tenga otra solicitud pendiente
-    const existingPendingRequest = await prisma.eventRequest.findFirst({
+    const pendingRequestsCount = await prisma.eventRequest.count({
       where: {
         group_id,
         status: 'PENDING'
       }
     });
 
-    if (existingPendingRequest.length == 3) {
+    if (pendingRequestsCount >= 3) {
       return res.status(409).json({ 
-        error: 'Ya tienes tres solicitudes de grupo pendientes' 
+        error: 'Este grupo ya tiene tres solicitudes de evento pendientes' 
       });
     }
 
@@ -363,14 +363,14 @@ router.delete('/:id', checkJwt, async (req, res) => {
     });
 
     // Verificar permisos
-    const moderatorIds = Array.isArray(eventRequest.group.moderators_ids) 
-      ? eventRequest.group.moderators_ids 
-      : [];
+    // const moderatorIds = Array.isArray(eventRequest.group.moderators_ids) 
+    //   ? eventRequest.group.moderators_ids 
+    //   : [];
     const isRepresentative = user.id === eventRequest.group.repre_id;
-    const isModerator = moderatorIds.includes(user.id);
+    // const isModerator = moderatorIds.includes(user.id);
     const isAdmin = user.role === 'ADMIN';
 
-    if (!isRepresentative && !isModerator && !isAdmin) {
+    if (!isRepresentative && !isAdmin) {
       return res.status(403).json({ error: 'No autorizado' });
     }
 
@@ -382,13 +382,13 @@ router.delete('/:id', checkJwt, async (req, res) => {
     }
 
     // Verificar si tiene eventos programados
-    const schedulingCount = await prisma.eventsScheduling.count({
-      where: { event_request_id: id }
+    const feedbackCount = await prisma.feedback.count({
+      where: { event_id: id }
     });
 
-    if (schedulingCount > 0 && !isAdmin) {
+    if (feedbackCount > 0 && !isAdmin) {
       return res.status(409).json({ 
-        error: 'No se puede eliminar: la solicitud tiene eventos programados' 
+        error: 'No se puede eliminar: la solicitud tiene feedback asociado' 
       });
     }
     
