@@ -1,4 +1,4 @@
-const { prisma } = require('../lib/prisma');
+const { prisma } = require('../../lib/prisma');
 
 class UserChecker {
   async userHasBeenCreatedInOwnDB(auth0_id) {

@@ -119,16 +119,12 @@ router.get('/', async (req, res) => {
     // const allModeratorIds = new Set();
     const allRepresentativeIds = new Set();
     
-    // items.forEach(group => {
-    //   allRepresentativeIds.add(group.repre_id);
-    //   const moderatorIds = Array.isArray(group.moderators_ids) 
-    //     ? group.moderators_ids 
-    //     : [];
-    //   moderatorIds.forEach(id => allModeratorIds.add(id));
-    // });
+    items.forEach(group => {
+      allRepresentativeIds.add(group.repre_id);
+    });
 
     // Una sola query para TODOS los usuarios necesarios
-    // const allUserIds = [...allModeratorIds, ...allRepresentativeIds];
+    const allUserIds = [ ...allRepresentativeIds];
     const users = allUserIds.length > 0 
       ? await prisma.user.findMany({
         where: { id: { in: allUserIds } },
@@ -145,25 +141,25 @@ router.get('/', async (req, res) => {
     const usersMap = new Map(users.map(u => [u.id, u]));
 
     // Mapear los datos
-    // const itemsWithModerators = items.map(group => {
-    //   const moderatorIds = Array.isArray(group.moderators_ids) 
-    //     ? group.moderators_ids 
-    //     : [];
+    const itemsWithModerators = items.map(group => {
+      // const moderatorIds = Array.isArray(group.moderators_ids) 
+      //   ? group.moderators_ids 
+      //   : [];
       
-    //   const moderators = moderatorIds
-    //     .map(id => usersMap.get(id))
-    //     .filter(Boolean); // Eliminar undefined si un ID no existe
+      // const moderators = moderatorIds
+      //   .map(id => usersMap.get(id))
+      //   .filter(Boolean); // Eliminar undefined si un ID no existe
 
-    //   const representative = usersMap.get(group.repre_id) || null;
+      const representative = usersMap.get(group.repre_id) || null;
 
-    //   return {
-    //     ...group,
-    //     representative,
-    //     moderators
-    //   };
-    // });
+      return {
+        ...group,
+        representative,
+        // moderators
+      };
+    });
 
-    res.json(items);
+    res.json(itemsWithModerators);
   } catch (error) {
     console.log('ERROR GET /groups:', error);
     res.status(500).json({ error: 'No se pudo listar los grupos' });
@@ -204,13 +200,6 @@ router.get('/:id', async (req, res) => {
                 location: true
               }
             },
-            eventsScheduling: {
-              select: {
-                id: true,
-                start_time: true,
-                end_time: true
-              }
-            }
           },
           orderBy: { day: 'desc' }
         }
@@ -299,6 +288,8 @@ router.post('/', checkJwt, async (req, res) => {
     if (!representative) {
       return res.status(404).json({ error: 'Representante no encontrado' });
     }
+
+    console.log(representative);
 
     if (!representative.is_representative) {
       return res.status(400).json({ 

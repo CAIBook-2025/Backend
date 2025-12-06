@@ -6,8 +6,15 @@ const router = Router();
 // GET /strikes
 router.get('/', async (_req, res) => {
   try {
-    const items = await prisma.strike.findMany({ orderBy: { date: 'desc' } });
-    res.json(items);
+    const strikes = await prisma.strike.findMany({ 
+      orderBy: { date: 'desc' },
+      include: {
+        student: true,  
+        admin: true    
+      }
+    });
+
+    res.json(strikes);
   } catch (error) {
     console.log('ERROR GET /strikes:', error);
     res.status(500).json({ error: 'No se pudo listar los strikes' });
@@ -33,21 +40,58 @@ router.get('/:id', async (req, res) => {
 // POST /strikes
 router.post('/', async (req, res) => {
   try {
-    const { student_id, description, date, type, admin_id } = req.body || {};
-    if (!student_id || !type || !admin_id) {
-      return res.status(400).json({ error: 'student_id, type, admin_id son requeridos' });
+    const { student_email, description, date, type, admin_email } = req.body || {};
+    
+
+    if (!student_email || !type || !admin_email) {
+      return res.status(400).json({ error: 'student_email, type, admin_email son requeridos' });
+    }
+
+    const student = await prisma.user.findUnique({
+      where: { 
+        email: student_email,
+      }
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Estudiante no encontrado' });
+    }
+
+    const admin = await prisma.user.findUnique({
+      where: { 
+        email: admin_email,
+        OR: [
+          { role: 'ADMIN' }
+        ]
+      }
+    });
+
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin no encontrado' });
     }
 
     const created = await prisma.strike.create({
       data: {
-        student_id, type, admin_id,
+        student_id: student.id, 
+        type, 
+        admin_id: admin.id,
         description: description ?? null,
         date: date ? new Date(date) : undefined
+      },
+      include: {
+        student: true,
+        admin: true
       }
     });
+
     res.status(201).json(created);
   } catch (error) {
     console.log('ERROR POST /strikes:', error);
+    
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Ya existe un strike similar' });
+    }
+    
     res.status(500).json({ error: 'No se pudo crear el strike' });
   }
 });

@@ -1,7 +1,7 @@
-const { prisma } = require('../lib/prisma');
-const { getMachineToMachineToken } = require('../utils/auth0_utils');
+const { prisma } = require('../../lib/prisma');
+const { getMachineToMachineToken } = require('../../utils/auth0_utils');
 const crypto = require('crypto');
-const { BadRequestError } = require('../utils/appError');
+const { BadRequestError } = require('../../utils/appError');
 
 class UserCreator {
   async createUserInOwnDB(userData) {

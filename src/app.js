@@ -10,12 +10,13 @@ const schedulesRouter = require('./routes/schedule.routes');
 const strikesRouter = require('./routes/strikes.routes');
 const attendanceRouter = require('./routes/attendance.routes');
 const groupsRouter = require('./routes/groups.routes');
-const eventsRouter = require('./routes/events.routes');
+// const eventsRouter = require('./routes/events.routes');
 const publicSpacesRouter = require('./routes/publicSpaces.routes');
 const eventRequestsRouter = require('./routes/eventRequests.routes');
 const groupRequestsRouter = require('./routes/groupRequests.routes');
 const userRouter = require('./routes/user.routes');
 const historyRouter = require('./routes/history.routes');
+const eventFeedbackRouter = require('./routes/eventFeedback.routes');
 
 const app = express();
 
@@ -36,9 +37,8 @@ app.get('/', (_req, res) => {
 
 // Routers
 app.use('/api/groups', groupsRouter);
-app.use('/api/events', eventsRouter);
 app.use('/api/public-spaces', publicSpacesRouter);
-app.use('/api/event-requests', eventRequestsRouter);
+app.use('/api/events', eventRequestsRouter);
 app.use('/api/group-requests', groupRequestsRouter);
 app.use('/api/users', userRouter);
 app.use('/api/sRooms', roomsRouter);
@@ -46,6 +46,7 @@ app.use('/api/srSchedule', schedulesRouter);
 app.use('/api/strikes', strikesRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/history', historyRouter);
+app.use('/api/event-feedback', eventFeedbackRouter);
 
 // JWT error handler
 app.use((err, _req, res, _next) => {

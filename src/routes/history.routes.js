@@ -680,4 +680,336 @@ router.get('/groups-created', checkJwt, async (req, res) => {
   }
 });
 
+// GET /history/representative/events-created - Historial de eventos creados por el representante
+router.get('/representative/events-created', checkJwt, async (req, res) => {
+  try {
+    // Obtener el usuario autenticado
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Verificar que sea representante
+    if (!user.is_representative) {
+      return res.status(403).json({ 
+        error: 'Solo los representantes pueden ver el historial de eventos creados' 
+      });
+    }
+
+    // Obtener el grupo del representante
+    const group = await prisma.group.findFirst({
+      where: { repre_id: user.id }
+    });
+
+    if (!group) {
+      return res.status(404).json({ 
+        error: 'No se encontró un grupo asociado a este representante' 
+      });
+    }
+
+    // Obtener paginación
+    const take = Math.min(Math.max(Number(req.query.take) || 20, 1), 100);
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const skip = (page - 1) * take;
+
+    // Filtros opcionales
+    const where = {
+      eventRequest: { group_id: group.id }
+    };
+
+    // Filtro por fecha (desde)
+    if (req.query.from) {
+      const fromDate = new Date(req.query.from);
+      if (isNaN(fromDate.getTime())) {
+        return res.status(400).json({ error: 'Formato de fecha "from" inválido' });
+      }
+      where.start_time = { ...where.start_time, gte: fromDate };
+    }
+
+    // Filtro por fecha (hasta)
+    if (req.query.to) {
+      const toDate = new Date(req.query.to);
+      if (isNaN(toDate.getTime())) {
+        return res.status(400).json({ error: 'Formato de fecha "to" inválido' });
+      }
+      where.start_time = { ...where.start_time, lte: toDate };
+    }
+
+    // Obtener eventos con estadísticas de asistencia y detalles de asistentes
+    const [events, total] = await Promise.all([
+      prisma.eventsScheduling.findMany({
+        where,
+        take,
+        skip,
+        orderBy: { start_time: 'desc' },
+        include: {
+          eventRequest: {
+            include: {
+              group: {
+                include: {
+                  groupRequest: {
+                    select: {
+                      name: true,
+                      logo: true,
+                      description: true
+                    }
+                  }
+                }
+              },
+              publicSpace: {
+                select: {
+                  id: true,
+                  name: true,
+                  location: true,
+                  capacity: true
+                }
+              }
+            }
+          },
+          attendance: {
+            select: {
+              id: true,
+              status: true,
+              rating: true,
+              feedback: true,
+              student_id: true,
+              student: {
+                select: {
+                  id: true,
+                  first_name: true,
+                  last_name: true,
+                  email: true
+                }
+              }
+            }
+          }
+        }
+      }),
+      prisma.eventsScheduling.count({ where })
+    ]);
+
+    // Formatear respuesta con estadísticas y detalles de asistentes
+    const formattedEvents = events.map(event => {
+      const attendanceStats = {
+        total: event.attendance.length,
+        present: event.attendance.filter(a => a.status === 'PRESENT').length,
+        absent: event.attendance.filter(a => a.status === 'ABSENT').length,
+        late: event.attendance.filter(a => a.status === 'LATE').length,
+        pending: event.attendance.filter(a => a.status === 'PENDING').length,
+        excused: event.attendance.filter(a => a.status === 'EXCUSED').length,
+        averageRating: event.attendance.filter(a => a.rating !== null).length > 0
+          ? event.attendance
+            .filter(a => a.rating !== null)
+            .reduce((sum, a) => sum + Number(a.rating), 0) / 
+            event.attendance.filter(a => a.rating !== null).length
+          : null
+      };
+
+      // Formatear lista de asistentes con detalles completos
+      const attendees = event.attendance.map(a => ({
+        attendanceId: a.id,
+        student: a.student,
+        status: a.status,
+        rating: a.rating,
+        feedback: a.feedback
+      }));
+
+      return {
+        id: event.id,
+        startTime: event.start_time,
+        endTime: event.end_time,
+        name: event.eventRequest.name,
+        goal: event.eventRequest.goal,
+        description: event.eventRequest.description,
+        group: {
+          id: event.eventRequest.group.id,
+          name: event.eventRequest.group.groupRequest.name,
+          logo: event.eventRequest.group.groupRequest.logo,
+          reputation: event.eventRequest.group.reputation
+        },
+        publicSpace: event.eventRequest.publicSpace,
+        attendanceStats,
+        attendees,
+        createdAt: event.createdAt,
+        updatedAt: event.updatedAt
+      };
+    });
+
+    // Calcular estadísticas generales
+    const overallStats = {
+      totalEvents: total,
+      totalAttendance: events.reduce((sum, e) => sum + e.attendance.length, 0),
+      averageAttendanceRate: events.length > 0
+        ? events.reduce((sum, e) => {
+          const present = e.attendance.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length;
+          return sum + (e.attendance.length > 0 ? (present / e.attendance.length) * 100 : 0);
+        }, 0) / events.length
+        : 0
+    };
+
+    res.json({
+      page,
+      take,
+      total,
+      totalPages: Math.ceil(total / take),
+      stats: overallStats,
+      events: formattedEvents
+    });
+  } catch (error) {
+    console.log('ERROR GET /history/representative/events-created:', error);
+    res.status(500).json({ error: 'No se pudo obtener el historial de eventos creados' });
+  }
+});
+
+// GET /history/representative/study-rooms - Historial de salas de estudio reservadas por el representante
+router.get('/representative/study-rooms', checkJwt, async (req, res) => {
+  try {
+    // Obtener el usuario autenticado
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Verificar que sea representante
+    if (!user.is_representative) {
+      return res.status(403).json({ 
+        error: 'Solo los representantes pueden ver su historial de salas de estudio' 
+      });
+    }
+
+    // Obtener paginación
+    const take = Math.min(Math.max(Number(req.query.take) || 20, 1), 100);
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const skip = (page - 1) * take;
+
+    // Filtros opcionales - solo reservas del representante autenticado
+    const where = {
+      user_id: user.id
+    };
+
+    // Filtro por sala específica
+    if (req.query.studyRoomId) {
+      const roomId = Number(req.query.studyRoomId);
+      if (isNaN(roomId)) {
+        return res.status(400).json({ error: 'ID de sala inválido' });
+      }
+      where.sr_id = roomId;
+    }
+
+    // Filtro por fecha (desde)
+    if (req.query.from) {
+      const fromDate = new Date(req.query.from);
+      if (isNaN(fromDate.getTime())) {
+        return res.status(400).json({ error: 'Formato de fecha "from" inválido' });
+      }
+      where.day = { ...where.day, gte: fromDate };
+    }
+
+    // Filtro por fecha (hasta)
+    if (req.query.to) {
+      const toDate = new Date(req.query.to);
+      if (isNaN(toDate.getTime())) {
+        return res.status(400).json({ error: 'Formato de fecha "to" inválido' });
+      }
+      where.day = { ...where.day, lte: toDate };
+    }
+
+    // Filtro por estado
+    if (req.query.status) {
+      const validStatuses = ['PENDING', 'PRESENT', 'ABSENT'];
+      if (!validStatuses.includes(req.query.status)) {
+        return res.status(400).json({ 
+          error: `Estado inválido. Debe ser uno de: ${validStatuses.join(', ')}` 
+        });
+      }
+      where.status = req.query.status;
+    }
+
+    // Filtro por disponibilidad
+    if (req.query.available) {
+      const validAvailability = ['AVAILABLE', 'UNAVAILABLE'];
+      if (!validAvailability.includes(req.query.available)) {
+        return res.status(400).json({ 
+          error: `Disponibilidad inválida. Debe ser uno de: ${validAvailability.join(', ')}` 
+        });
+      }
+      where.available = req.query.available;
+    }
+
+    // Filtro por finalizado
+    if (req.query.isFinished !== undefined) {
+      where.is_finished = req.query.isFinished === 'true';
+    }
+
+    // Obtener reservas y total
+    const [reservations, total] = await Promise.all([
+      prisma.sRScheduling.findMany({
+        where,
+        take,
+        skip,
+        orderBy: { day: 'desc' },
+        include: {
+          studyRoom: {
+            select: {
+              id: true,
+              name: true,
+              capacity: true,
+              location: true,
+              equipment: true
+            }
+          }
+        }
+      }),
+      prisma.sRScheduling.count({ where })
+    ]);
+
+    // Formatear respuesta
+    const formattedReservations = reservations.map(reservation => ({
+      id: reservation.id,
+      date: reservation.day,
+      module: reservation.module,
+      status: reservation.status,
+      available: reservation.available,
+      isFinished: reservation.is_finished,
+      studyRoom: reservation.studyRoom,
+      createdAt: reservation.createdAt,
+      updatedAt: reservation.updatedAt
+    }));
+
+    // Calcular estadísticas
+    const stats = {
+      total,
+      byStatus: {
+        pending: reservations.filter(r => r.status === 'PENDING').length,
+        present: reservations.filter(r => r.status === 'PRESENT').length,
+        absent: reservations.filter(r => r.status === 'ABSENT').length
+      },
+      byAvailability: {
+        available: reservations.filter(r => r.available === 'AVAILABLE').length,
+        unavailable: reservations.filter(r => r.available === 'UNAVAILABLE').length
+      },
+      finished: reservations.filter(r => r.is_finished).length,
+      active: reservations.filter(r => !r.is_finished).length
+    };
+
+    res.json({
+      page,
+      take,
+      total,
+      totalPages: Math.ceil(total / take),
+      stats,
+      studyRooms: formattedReservations
+    });
+  } catch (error) {
+    console.log('ERROR GET /history/representative/study-rooms:', error);
+    res.status(500).json({ error: 'No se pudo obtener el historial de salas de estudio' });
+  }
+});
+
 module.exports = router;
