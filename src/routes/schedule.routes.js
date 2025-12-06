@@ -3,13 +3,13 @@ const { prisma } = require('../lib/prisma');
 
 const router = Router();
 // const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
-function addDays(date, days) {
-  const d = new Date(date);
-  console.log("previos date", d)
-  d.setDate(d.getDate() + days);
-  console.log("new date", d)
-  return d;
-}
+// function addDays(date, days) {
+//   const d = new Date(date);
+//   console.log("previos date", d)
+//   d.setDate(d.getDate() + days);
+//   console.log("new date", d)
+//   return d;
+// }
 
 // GET /schedules?srId=&date=YYYY-MM-DD&page=&take=
 router.get('/', async (req, res) => {
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 
     const where = {};
 
-    const date = new Date(`${String(req.query.day)}T00:00:00.000Z`);
+    // const date = new Date(`${String(req.query.day)}T00:00:00.000Z`);
 
     if (req.query.day) {
       const dateStr = String(req.query.day);
@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
         return res.status(400).json({ error: 'El formato de date debe ser YYYY-MM-DD' });
       }
       // Igualdad exacta a medianoche UTC
-      const dayUTC = new Date(`${dateStr}T00:00:00.000Z`);
+      const dayUTC = new Date(`${dateStr}T03:00:00.000Z`);
       where.day = { equals: dayUTC };
     }
 
@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
       prisma.sRScheduling.count({ where })
     ]);
 
-    console.log(total)
+    console.log(total);
 
     res.json({ page, take, total, items });
   } catch (error) {
@@ -181,6 +181,15 @@ router.patch('/book', async (req, res) => {
       return res.status(400).json({ error: 'userId es requerido' });
     }
 
+    console.log(id);
+    console.log(userId);
+
+    const schedule = await prisma.sRScheduling.findMany({
+      where: { id }
+    });
+
+    console.log(schedule);
+
     const result = await prisma.sRScheduling.updateMany({
       where: {
         id,
@@ -193,6 +202,8 @@ router.patch('/book', async (req, res) => {
         available: 'UNAVAILABLE',
       },
     });
+
+    console.log(result);
 
     if (result.count !== 1) {
       return res.status(409).json({
