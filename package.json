@@ -51,5 +51,8 @@
     "*.{js,jsx,ts,tsx}": [
       "eslint --fix"
     ]
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }

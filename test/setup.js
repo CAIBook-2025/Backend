@@ -448,8 +448,8 @@ jest.mock('../src/lib/prisma', () => ({
                 email: 'representative@example.com', 
                 auth0_id: 'test-user-id',
                 role: 'ADMIN',
-                is_representative: true,
-                is_moderator: false
+                // is_representative: true,
+                // is_moderator: false
               });
             } else if (id === 2 || id === 3) {
               users.push({ 
@@ -459,8 +459,8 @@ jest.mock('../src/lib/prisma', () => ({
                 email: `moderator${id}@example.com`, 
                 auth0_id: `test-moderator-${id}`,
                 role: 'USER',
-                is_representative: false,
-                is_moderator: true
+                // is_representative: false,
+                // is_moderator: true
               });
             } else if (id < 1000) {
               users.push({ 
@@ -470,8 +470,8 @@ jest.mock('../src/lib/prisma', () => ({
                 email: `user${id}@example.com`, 
                 auth0_id: `test-user-${id}`,
                 role: 'USER',
-                is_representative: false,
-                is_moderator: false
+                // is_representative: false,
+                // is_moderator: false
               });
             }
           });
@@ -493,8 +493,8 @@ jest.mock('../src/lib/prisma', () => ({
             email: 'representative@example.com', 
             auth0_id: 'test-user-id',
             role: 'ADMIN',
-            is_representative: true,
-            is_moderator: false
+            // is_representative: true,
+            // is_moderator: false
           }
         ]);
       }),
@@ -514,8 +514,8 @@ jest.mock('../src/lib/prisma', () => ({
                 email: 'representative@example.com',
                 auth0_id: 'test-user-id',
                 role: 'ADMIN',
-                is_representative: true,
-                is_moderator: false
+                // is_representative: true,
+                // is_moderator: false
               });
             }
             // IDs 2 y 3: Moderadores
@@ -527,8 +527,8 @@ jest.mock('../src/lib/prisma', () => ({
                 email: `moderator${args.where.id}@example.com`,
                 auth0_id: `test-moderator-${args.where.id}`,
                 role: 'USER',
-                is_representative: false,
-                is_moderator: true
+                // is_representative: false,
+                // is_moderator: true
               });
             }
             // Otros IDs: Usuarios normales
@@ -539,8 +539,8 @@ jest.mock('../src/lib/prisma', () => ({
               email: `user${args.where.id}@example.com`,
               auth0_id: `test-user-${args.where.id}`,
               role: 'USER',
-              is_representative: false,
-              is_moderator: false
+              // is_representative: false,
+              // is_moderator: false
             });
           }
           return Promise.resolve(null);
@@ -553,8 +553,8 @@ jest.mock('../src/lib/prisma', () => ({
             email: 'representative@example.com',
             auth0_id: args.where.auth0_id,
             role: 'ADMIN',
-            is_representative: true,
-            is_moderator: false
+            // is_representative: true,
+            // is_moderator: false
           });
         }
         return Promise.resolve(null);
