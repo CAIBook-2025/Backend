@@ -16,7 +16,6 @@ model User {
   phone             String
   student_number    String
   career            String
-  is_representative Boolean        @default(false)
   role              UserRole       @default(STUDENT)
   is_deleted        Boolean        @default(false)
   createdAt         DateTime       @default(now())
