@@ -198,7 +198,7 @@ router.post('/', checkJwt, async (req, res) => {
       }
     });
 
-    if (existingPendingRequest.length == 3) {
+    if (existingPendingRequest?.length == 3) {
       return res.status(409).json({ 
         error: 'Ya tienes tres solicitudes de grupo pendientes' 
       });
