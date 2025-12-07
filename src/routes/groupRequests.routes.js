@@ -58,11 +58,13 @@ router.get('/', checkJwt, async (req, res) => {
       description: item.description,
       logo: item.logo,
       status: item.status,
+      is_deleted: item.is_deleted,
       user: item.user,
       group_created: item.group ? true : false,
       group_id: item.group?.id || null,
       createdAt: item.createdAt,
-      updatedAt: item.updatedAt
+      updatedAt: item.updatedAt,
+      deletedAt: item.deletedAt
     }));
 
     res.json(formattedItems);
@@ -122,6 +124,7 @@ router.get('/:id', checkJwt, async (req, res) => {
       description: item.description,
       logo: item.logo,
       status: item.status,
+      is_deleted: item.is_deleted,
       user: item.user,
       group: item.group ? {
         id: item.group.id,
@@ -130,7 +133,8 @@ router.get('/:id', checkJwt, async (req, res) => {
         recent_events: item.group.eventRequests
       } : null,
       createdAt: item.createdAt,
-      updatedAt: item.updatedAt
+      updatedAt: item.updatedAt,
+      deletedAt: item.deletedAt
     };
 
     res.json(formatted);
