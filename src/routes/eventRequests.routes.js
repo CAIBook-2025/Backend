@@ -64,6 +64,7 @@ router.get('/', checkJwt, async (req, res) => {
       day: item.day,
       module: item.module,
       n_attendees: item.n_attendees,
+      is_deleted: item.is_deleted,
       group: {
         id: item.group.id,
         name: item.group.groupRequest.name,
@@ -72,7 +73,8 @@ router.get('/', checkJwt, async (req, res) => {
       },
       public_space: item.publicSpace,
       createdAt: item.createdAt,
-      updatedAt: item.updatedAt
+      updatedAt: item.updatedAt,
+      deletedAt: item.deletedAt
     }));
 
     res.json(formattedItems);
@@ -165,6 +167,7 @@ router.get('/:id', checkJwt, async (req, res) => {
       day: item.day,
       module: item.module,
       n_attendees: item.n_attendees,
+      is_deleted: item.is_deleted,
       group: {
         id: item.group.id,
         name: item.group.groupRequest.name,
@@ -178,7 +181,8 @@ router.get('/:id', checkJwt, async (req, res) => {
       public_space: item.publicSpace,
       events_scheduling: item.eventsScheduling,
       createdAt: item.createdAt,
-      updatedAt: item.updatedAt
+      updatedAt: item.updatedAt,
+      deletedAt: item.deletedAt
     };
 
     res.json(formatted);
