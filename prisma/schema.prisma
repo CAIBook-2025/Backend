@@ -20,7 +20,7 @@ model User {
   is_deleted        Boolean        @default(false)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
-  deletedAt        DateTime?
+  deletedAt         DateTime?
   feedback          Feedback[]
   groupRequests     GroupRequest[]
   srScheduling      SRScheduling[]
@@ -39,9 +39,9 @@ model GroupRequest {
   is_deleted  Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  deletedAt        DateTime?
+  deletedAt   DateTime?
   group       Group?        @relation("GroupFromRequest")
-  user        User          @relation(fields: [user_id], references: [id])
+  user        User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id, status])
 }
@@ -56,7 +56,7 @@ model Group {
   updatedAt        DateTime       @updatedAt
   deletedAt        DateTime?
   eventRequests    EventRequest[]
-  groupRequest     GroupRequest   @relation("GroupFromRequest", fields: [group_request_id], references: [id])
+  groupRequest     GroupRequest   @relation("GroupFromRequest", fields: [group_request_id], references: [id], onDelete: Cascade)
 }
 
 model Strike {
@@ -111,8 +111,8 @@ model Feedback {
   comment    String?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
-  event      EventRequest     @relation(fields: [event_id], references: [id])
-  student    User             @relation(fields: [student_id], references: [id])
+  event      EventRequest     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  student    User             @relation(fields: [student_id], references: [id], onDelete: Cascade)
 
   @@unique([student_id, event_id])
   @@index([student_id, event_id])
@@ -132,7 +132,7 @@ model EventRequest {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   deletedAt        DateTime?
-  group            Group              @relation(fields: [group_id], references: [id])
+  group            Group              @relation(fields: [group_id], references: [id], onDelete: Cascade)
   publicSpace      PublicSpace        @relation(fields: [public_space_id], references: [id])
   feedback         Feedback[]
 

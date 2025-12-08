@@ -40,6 +40,7 @@ router.get('/', async (req, res) => {
         orderBy: [{ day: 'asc' }, { module: 'asc' }],
         include: {
           studyRoom: true,
+          user: true
         }
       }),
       prisma.sRScheduling.count({ where })
