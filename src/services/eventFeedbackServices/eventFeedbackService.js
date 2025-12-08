@@ -169,7 +169,7 @@ class EventFeedbackService {
     const sanitizedStudentId = student.id;
 
     const existingFeedback = await prisma.feedback.findUnique({
-      where: { id: eventFeedbackId, is_deleted: false },
+      where: { id: eventFeedbackId },
     });
     if (!existingFeedback) {
       throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.updateOwnEventFeedback');
@@ -241,7 +241,7 @@ class EventFeedbackService {
 
   async updateAdminEventFeedback(eventFeedbackId, feedbackData) {
     const existingFeedback = await prisma.feedback.findUnique({
-      where: { id: eventFeedbackId, is_deleted: false },
+      where: { id: eventFeedbackId },
     });
     if (!existingFeedback) {
       throw new NotFoundError('Feedback no encontrado', 'EventFeedbackService.updateEventFeedback');
