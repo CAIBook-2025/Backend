@@ -1,6 +1,8 @@
 const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
-const { checkJwt } = require('../middleware/auth');
+const { checkJwt, checkAdmin } = require('../middleware/auth');
+const EventRequestDeleter  = require('../services/eventRequestServices/eventRequestDeleter');
+const errorHandler  = require('../utils/errorHandler');
 
 const router = Router();
 
@@ -569,6 +571,29 @@ router.patch('/:id', checkJwt, async (req, res) => {
     }
     console.log('ERROR PATCH /event-requests/:id:', error);
     res.status(500).json({ error: 'No se pudo actualizar la solicitud de evento' });
+  }
+});
+
+// PATCH /events/delete/:eventId - EventRequest soft delete
+router.patch('/delete/:eventId', checkJwt, async (req, res) => {
+  try {
+    const eventRequestId = Number(req.params.eventId);
+    const representativeAuth0Id = req.auth.sub;
+    const result = await EventRequestDeleter.softDeleteEventRequestById(eventRequestId, representativeAuth0Id);
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'PATCH /event-requests/delete/:eventRequestId', 'No se pudo eliminar la solicitud de evento');
+  }
+});
+
+// PATCH /events/admin/delete/:eventId - Admin EventRequest soft delete
+router.patch('/admin/delete/:eventId', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    const eventRequestId = Number(req.params.eventId);
+    const result = await EventRequestDeleter.adminSoftDeleteEventRequestById(eventRequestId);
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'PATCH /event-requests/admin/delete/:eventRequestId', 'No se pudo eliminar la solicitud de evento');
   }
 });
 

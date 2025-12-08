@@ -1,6 +1,8 @@
 const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
-const { checkJwt } = require('../middleware/auth');
+const { checkJwt, checkAdmin } = require('../middleware/auth');
+const groupRequestDeleter = require('../services/groupRequestServices/groupRequestDeleter');
+const errorHandler = require('../utils/errorHandler');
 
 const router = Router();
 
@@ -423,6 +425,28 @@ router.patch('/:id', checkJwt, async (req, res) => {
     }
     console.log('ERROR PATCH /group-requests/:id:', error);
     res.status(500).json({ error: 'No se pudo actualizar la solicitud de grupo' });
+  }
+});
+
+// PATCH /group-requests/delete/:id - Soft Delete own Group Requests
+router.patch('/delete/:id', checkJwt, async (req, res) => {
+  try {
+    const group_request_id = Number(req.params.id);
+    const student_auth0_id = req.auth.sub;
+    const result = await groupRequestDeleter.softDeleteGroupRequestById(group_request_id, student_auth0_id);
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'PATCH /group-requests/delete/:id', 'No se pudo eliminar la solicitud de grupo');
+  }
+});
+
+// PATCH /group-requests/admin/delete/:id - Soft Delete por admin
+router.patch('/admin/delete/:id', checkJwt, checkAdmin, async (req, res) => {
+  try {
+    const result = await groupRequestDeleter.adminSoftDeleteGroupRequestById(Number(req.params.id));
+    res.json(result);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'PATCH /group-requests/admin/delete/:id', 'No se pudo eliminar la solicitud de grupo');
   }
 });
 
