@@ -260,7 +260,7 @@ router.post('/', checkJwt, async (req, res) => {
 
     // Validar que el espacio existe y está disponible
     const publicSpace = await prisma.publicSpace.findUnique({
-      where: { id: public_space_id, is_deleted: false }
+      where: { id: public_space_id }
     });
 
     if (!publicSpace) {
