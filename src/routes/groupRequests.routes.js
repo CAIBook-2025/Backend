@@ -30,6 +30,8 @@ router.get('/', checkJwt, async (req, res) => {
       where.user_id = Number(user_id);
     }
 
+    where.is_deleted = false;
+
     const items = await prisma.groupRequest.findMany({ 
       where,
       orderBy: { createdAt: 'desc' },
@@ -85,7 +87,7 @@ router.get('/:id', checkJwt, async (req, res) => {
     }
     
     const item = await prisma.groupRequest.findUnique({ 
-      where: { id },
+      where: { id, is_deleted: false },
       include: {
         user: {
           select: {
@@ -182,7 +184,7 @@ router.post('/', checkJwt, async (req, res) => {
     // Obtener usuario autenticado
     
     const user = await prisma.user.findUnique({
-      where: { auth0_id: req.auth.sub }
+      where: { auth0_id: req.auth.sub, is_deleted: false }
     });
 
     if (!user) {
@@ -197,14 +199,15 @@ router.post('/', checkJwt, async (req, res) => {
     }
 
     // Verificar que el usuario no tenga otra solicitud pendiente
-    const existingPendingRequest = await prisma.groupRequest.findFirst({
+    const existingPendingRequest = await prisma.groupRequest.findMany({
       where: {
         user_id: user.id,
-        status: 'PENDING'
+        status: 'PENDING',
+        is_deleted: false
       }
     });
 
-    if (existingPendingRequest?.length == 3) {
+    if (existingPendingRequest?.length >= 3) {
       return res.status(409).json({ 
         error: 'Ya tienes tres solicitudes de grupo pendientes' 
       });
@@ -217,7 +220,8 @@ router.post('/', checkJwt, async (req, res) => {
           equals: name,
           mode: 'insensitive'
         },
-        status: { in: ['PENDING', 'CONFIRMED'] }
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        is_deleted: false
       }
     });
 
@@ -266,7 +270,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
 
     // Obtener la solicitud existente
     const existingRequest = await prisma.groupRequest.findUnique({
-      where: { id }
+      where: { id, is_deleted: false }
     });
 
     if (!existingRequest) {
@@ -275,7 +279,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
 
     // Obtener usuario autenticado
     const user = await prisma.user.findUnique({
-      where: { auth0_id: req.auth.sub }
+      where: { auth0_id: req.auth.sub, is_deleted: false }
     });
 
     const isOwner = user.id === existingRequest.user_id;
@@ -302,7 +306,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
       if (status === 'CONFIRMED' && existingRequest.status !== 'CONFIRMED') {
         // Verificar que el usuario solicitante sea representante
         const requestingUser = await prisma.user.findUnique({
-          where: { id: existingRequest.user_id }
+          where: { id: existingRequest.user_id, is_deleted: false }
         });
 
         if (!requestingUser) {
