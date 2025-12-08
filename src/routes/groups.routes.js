@@ -29,7 +29,7 @@ router.get('/my-groups', checkJwt, async (req, res) => {
 
     // Encontrar el usuario por auth0_id
     const requestingUser = await prisma.user.findUnique({ 
-      where: { auth0_id: req.auth.sub } 
+      where: { auth0_id: req.auth.sub, is_deleted: false } 
     });
 
     console.log('Usuario encontrado:', requestingUser);
@@ -41,7 +41,7 @@ router.get('/my-groups', checkJwt, async (req, res) => {
 
     // Buscar grupos donde el usuario es representante
     const groups = await prisma.group.findMany({ 
-      where: { repre_id: requestingUser.id },
+      where: { repre_id: requestingUser.id, is_deleted: false },
       include: {
         groupRequest: {
           select: {
@@ -83,7 +83,8 @@ router.get('/my-groups', checkJwt, async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const items = await prisma.group.findMany({ 
-      orderBy: { id: 'asc' },
+      where: { is_deleted: false },
+      orderBy: { id: 'asc', },
       include: {
         groupRequest: {
           select: {
@@ -129,7 +130,7 @@ router.get('/', async (req, res) => {
     const allUserIds = [ ...allRepresentativeIds];
     const users = allUserIds.length > 0 
       ? await prisma.user.findMany({
-        where: { id: { in: allUserIds } },
+        where: { id: { in: allUserIds }, is_deleted: false },
         select: { 
           id: true, 
           first_name: true, 
@@ -177,7 +178,7 @@ router.get('/:id', async (req, res) => {
     }
     
     const item = await prisma.group.findUnique({ 
-      where: { id },
+      where: { id, is_deleted: false },
       include: {
         groupRequest: {
           include: {
@@ -222,7 +223,7 @@ router.get('/:id', async (req, res) => {
     // Una sola query para todos los usuarios
     const users = allUserIds.length > 0
       ? await prisma.user.findMany({
-        where: { id: { in: allUserIds } },
+        where: { id: { in: allUserIds }, is_deleted: false },
         select: { 
           id: true, 
           first_name: true, 
@@ -257,7 +258,7 @@ router.post('/', checkJwt, async (req, res) => {
   try {
     // Verificar que el usuario es admin
     const requestingUser = await prisma.user.findUnique({ 
-      where: { auth0_id: req.auth.sub } 
+      where: { auth0_id: req.auth.sub, is_deleted: false } 
     });
 
     if (!requestingUser || requestingUser.role !== 'ADMIN') {
@@ -284,7 +285,7 @@ router.post('/', checkJwt, async (req, res) => {
 
     // Validar que el representante existe y tiene el rol adecuado
     const representative = await prisma.user.findUnique({
-      where: { id: repre_id }
+      where: { id: repre_id, is_deleted: false }
     });
 
     if (!representative) {
@@ -301,7 +302,7 @@ router.post('/', checkJwt, async (req, res) => {
 
     // Validar que el group_request existe
     const groupRequest = await prisma.groupRequest.findUnique({
-      where: { id: group_request_id }
+      where: { id: group_request_id, is_deleted: false }
     });
 
     if (!groupRequest) {
@@ -397,7 +398,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
 
     // Verificar que el grupo existe
     const existingGroup = await prisma.group.findUnique({ 
-      where: { id },
+      where: { id, is_deleted: false },
       include: { groupRequest: true }
     });
 
@@ -407,7 +408,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
 
     // Obtener usuario que hace la petición
     const requestingUser = await prisma.user.findUnique({ 
-      where: { auth0_id: req.auth.sub } 
+      where: { auth0_id: req.auth.sub, is_deleted: false } 
     });
 
     if (!requestingUser) {
@@ -445,7 +446,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
           }
 
           const newRepre = await prisma.user.findUnique({
-            where: { id: newRepreId }
+            where: { id: newRepreId, is_deleted: false }
           });
           
           if (!newRepre) {
@@ -537,7 +538,7 @@ router.delete('/:id', checkJwt, async (req, res) => {
 
     // Verificar que el usuario es admin
     const requestingUser = await prisma.user.findUnique({ 
-      where: { auth0_id: req.auth.sub } 
+      where: { auth0_id: req.auth.sub, is_deleted: false } 
     });
 
     if (!requestingUser || requestingUser.role !== 'ADMIN') {
@@ -580,13 +581,13 @@ router.get('/:id/events', async (req, res) => {
     }
 
     // Verificar que el grupo existe
-    const group = await prisma.group.findUnique({ where: { id } });
+    const group = await prisma.group.findUnique({ where: { id, is_deleted: false } });
     if (!group) {
       return res.status(404).json({ error: 'Grupo no encontrado' });
     }
 
     const events = await prisma.eventRequest.findMany({
-      where: { group_id: id },
+      where: { group_id: id, is_deleted: false },
       include: {
         publicSpace: {
           select: {
@@ -630,7 +631,7 @@ router.get('/my-groups-id/:id', checkJwt, async (req, res) => {
 
     // Encontrar el usuario por auth0_id
     const requestingUser = await prisma.user.findUnique({ 
-      where: { auth0_id: req.auth.sub } 
+      where: { auth0_id: req.auth.sub, is_deleted: false } 
     });
 
     // Verificar que el usuario es representante
@@ -641,7 +642,8 @@ router.get('/my-groups-id/:id', checkJwt, async (req, res) => {
     const group = await prisma.group.findUnique({ 
       where: { 
         id,
-        repre_id: requestingUser.id  // Solo puede ver grupos que representa
+        repre_id: requestingUser.id,  // Solo puede ver grupos que representa
+        is_deleted: false
       },
       include: {
         groupRequest: {
@@ -873,7 +875,7 @@ router.patch('/my-groups/transfer-representative/:id', checkJwt, async (req, res
 
     // Encontrar el usuario que hace la solicitud
     const requestingUser = await prisma.user.findUnique({ 
-      where: { auth0_id: req.auth.sub } 
+      where: { auth0_id: req.auth.sub, is_deleted: false } 
     });
 
     // Verificar que el usuario es representante actual
@@ -885,7 +887,8 @@ router.patch('/my-groups/transfer-representative/:id', checkJwt, async (req, res
     const group = await prisma.group.findUnique({ 
       where: { 
         id,
-        repre_id: requestingUser.id 
+        repre_id: requestingUser.id,
+        is_deleted: false
       }
     });
 
@@ -895,7 +898,7 @@ router.patch('/my-groups/transfer-representative/:id', checkJwt, async (req, res
 
     // Verificar que el nuevo representante es un moderador del grupo
     const newRepresentative = await prisma.user.findUnique({
-      where: { id: new_representative_id }
+      where: { id: new_representative_id, is_deleted: false }
     });
 
     // Verificar que el nuevo representante existe y es moderador
