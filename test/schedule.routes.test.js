@@ -5,16 +5,41 @@ const { prisma } = require('../src/lib/prisma');
 describe('Schedule Routes', () => {
   let createdRoomId;
   let createdScheduleId;
-  let userId = 1;
+  let adminUser, adminToken;
+  let studentUser, studentToken;
 
   beforeEach(async () => {
-    // 1. Promover Usuario a ADMIN (Opcional, pero seguro)
-    await prisma.user.update({
-      where: { id: userId },
-      data: { role: 'ADMIN' }
+    // 1. Crear Admin (para crear horarios)
+    adminUser = await prisma.user.create({
+      data: {
+        first_name: 'Admin',
+        last_name: 'Schedule',
+        email: 'admin.schedule@test.com',
+        auth0_id: 'auth0|admin-schedule',
+        role: 'ADMIN',
+        phone: '12345678',
+        student_number: 'ADM-SCH',
+        career: 'Admin'
+      }
     });
+    adminToken = `Bearer user-json:${JSON.stringify({ sub: adminUser.auth0_id, email: adminUser.email })}`;
 
-    // 2. Crear Sala de Estudio
+    // 2. Crear Student (para reservar)
+    studentUser = await prisma.user.create({
+      data: {
+        first_name: 'Student',
+        last_name: 'Schedule',
+        email: 'student.schedule@test.com',
+        auth0_id: 'auth0|student-schedule',
+        role: 'STUDENT',
+        phone: '87654321',
+        student_number: 'STD-SCH',
+        career: 'Ingeniería'
+      }
+    });
+    studentToken = `Bearer user-json:${JSON.stringify({ sub: studentUser.auth0_id, email: studentUser.email })}`;
+
+    // 3. Crear Sala de Estudio
     const sr = await prisma.studyRoom.create({
       data: {
         name: 'Seed Study Room',
@@ -25,7 +50,7 @@ describe('Schedule Routes', () => {
     });
     createdRoomId = sr.id;
 
-    // 3. Crear Horario (Schedule)
+    // 4. Crear Horario (Schedule)
     const schedule = await prisma.sRScheduling.create({
       data: {
         sr_id: createdRoomId,
@@ -59,7 +84,11 @@ describe('Schedule Routes', () => {
       module: 2, // Debe ser Int
       available: 'AVAILABLE'
     };
-    const res = await request(app).post('/api/srSchedule').send(newSchedule);
+    // Admin creates schedule
+    const res = await request(app)
+      .post('/api/srSchedule')
+      .set('Authorization', adminToken)
+      .send(newSchedule);
 
     if (res.status !== 201) console.error('POST Error:', res.body);
     expect(res.status).toBe(201);
@@ -68,18 +97,25 @@ describe('Schedule Routes', () => {
 
   it('PATCH /api/srSchedule/book - debería reservar un schedule', async () => {
     const reserveData = {
-      userId: userId,
+      userId: studentUser.id, // Student IS booking it
       id: createdScheduleId
     };
-    const res = await request(app).patch('/api/srSchedule/book').send(reserveData);
+    // Student requests booking
+    const res = await request(app)
+      .patch('/api/srSchedule/book')
+      .set('Authorization', studentToken)
+      .send(reserveData);
+
     if (res.status !== 200) console.error('PATCH Book Error:', res.body);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', createdScheduleId);
-    expect(res.body.user_id).toBe(userId);
+    expect(res.body.user_id).toBe(studentUser.id);
   });
 
   it('DELETE /api/srSchedule/:id - debería eliminar un schedule', async () => {
-    const res = await request(app).delete(`/api/srSchedule/${createdScheduleId}`);
+    const res = await request(app)
+      .delete(`/api/srSchedule/${createdScheduleId}`)
+      .set('Authorization', adminToken);
     expect(res.status).toBe(204);
   });
 });

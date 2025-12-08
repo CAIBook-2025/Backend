@@ -3,13 +3,23 @@ const app = require('../src/app');
 
 describe('Error Cases Tests - Casos que deben fallar', () => {
   const { prisma } = require('../src/lib/prisma');
+  let adminUser, adminToken;
 
   beforeEach(async () => {
-    // Promover User 1 a ADMIN para pasar checks de rol y llegar a validación de campos
-    await prisma.user.update({
-      where: { id: 1 },
-      data: { role: 'ADMIN' }, // Rol ADMIN
+    // 1. Crear Admin
+    adminUser = await prisma.user.create({
+      data: {
+        first_name: 'Admin',
+        last_name: 'Error',
+        email: 'admin.error@test.com',
+        auth0_id: 'auth0|admin-error',
+        role: 'ADMIN',
+        phone: '12345678',
+        student_number: 'ADM-ERR',
+        career: 'Admin'
+      }
     });
+    adminToken = `Bearer user-json:${JSON.stringify({ sub: adminUser.auth0_id, email: adminUser.email })}`;
   });
 
   describe('Validación de campos requeridos', () => {
@@ -23,7 +33,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
 
       const res = await request(app)
         .post('/api/users')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(incompleteUser);
 
       // Controlador o Prisma deben rechazar
@@ -37,7 +47,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
 
       const res = await request(app)
         .post('/api/groups')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(incompleteGroup);
 
       expect(res.status).toBeGreaterThanOrEqual(400); // 400, 403, 500
@@ -51,7 +61,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
 
       const res = await request(app)
         .post('/api/public-spaces')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(incompleteSpace);
 
       expect(res.status).toBeGreaterThanOrEqual(400); // 400, 500
@@ -63,7 +73,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
     it('GET /api/users/:id - debería devolver 400 para ID inválido', async () => {
       const res = await request(app)
         .get('/api/users/invalid-id')
-        .set('Authorization', 'Bearer valid-jwt-token'); // Users routes protected
+        .set('Authorization', adminToken); // Users routes protected
       expect([400, 500]).toContain(res.status); // ID inválido (string vs int)
       expect(res.body).toHaveProperty('error');
     });
@@ -71,7 +81,6 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
     it('GET /api/groups/:id - debería devolver 400 para ID negativo', async () => {
       const res = await request(app).get('/api/groups/-1');
       // POST Groups protected, GET likely public?
-      // Based on my view of groups.routes.js, it IS public.
       expect([400, 500]).toContain(res.status);
       expect(res.body).toHaveProperty('error');
     });
@@ -80,7 +89,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       const updateData = { name: 'Updated Room' };
       const res = await request(app)
         .patch('/api/sRooms/0')
-        .set('Authorization', 'Bearer valid-jwt-token') // Likely protected
+        .set('Authorization', adminToken) // Likely protected
         .send(updateData);
 
       expect(res.status).toBe(400); // Bad Request por ID 0
@@ -92,7 +101,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
     it('GET /api/events/:id - debería devolver 404 para evento inexistente', async () => {
       const res = await request(app)
         .get('/api/events/999999')
-        .set('Authorization', 'Bearer valid-jwt-token'); // Protected
+        .set('Authorization', adminToken); // Protected
       expect(res.status).toBe(404);
       expect(res.body).toHaveProperty('error');
     });
@@ -101,7 +110,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
       // Con DB real, si no existe prisma lanza P2025 o similar
       const res = await request(app)
         .delete('/api/strikes/999999')
-        .set('Authorization', 'Bearer valid-jwt-token'); // Protected
+        .set('Authorization', adminToken); // Protected
       expect([404, 400, 500]).toContain(res.status);
       // strikes.routes.js maneja P2025 -> 404.
       expect(res.status).toBe(404);
@@ -118,7 +127,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
 
       const res = await request(app)
         .post('/api/events')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(incompleteEventRequest);
 
       expect(res.status).toBe(400); // Bad Request por validación del controlador
@@ -135,7 +144,7 @@ describe('Error Cases Tests - Casos que deben fallar', () => {
 
       const res = await request(app)
         .post('/api/events')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(invalidDateEventRequest);
 
       // return 404 if group/space doesn't exist (likely).

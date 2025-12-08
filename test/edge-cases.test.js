@@ -3,7 +3,7 @@ const app = require('../src/app');
 const { prisma } = require('../src/lib/prisma');
 
 describe('Edge Cases Tests - Casos límite y esquina', () => {
-  let adminId;
+  let adminId, adminToken;
   let groupRequestId;
   let groupId;
   let spaceId;
@@ -11,11 +11,20 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
   // Setup para pruebas de capacidad
   beforeEach(async () => {
     // 1. Crear Admin y dependencias
-    const user1 = await prisma.user.update({
-      where: { id: 1 },
-      data: { role: 'ADMIN' } // Rol ADMIN para crear espacios/grupos y también es repre
+    const admin = await prisma.user.create({
+      data: {
+        first_name: 'Admin',
+        last_name: 'Edge',
+        email: 'admin.edge@test.com',
+        auth0_id: 'auth0|admin-edge',
+        role: 'ADMIN',
+        phone: '12345678',
+        student_number: 'ADM-EDG',
+        career: 'Admin'
+      }
     });
-    adminId = user1.id;
+    adminId = admin.id;
+    adminToken = `Bearer user-json:${JSON.stringify({ sub: admin.auth0_id, email: admin.email })}`;
 
     // 2. Grupo
     const gr = await prisma.groupRequest.create({
@@ -52,7 +61,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
 
       const res = await request(app)
         .post('/api/events')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(eventRequest);
 
       expect(res.status).toBe(201);
@@ -74,7 +83,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
 
       const res = await request(app)
         .post('/api/events')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(eventRequest);
 
       // Si el backend no valida, será 201. Si valida, 400.
@@ -84,7 +93,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
 
   describe('Valores extremos', () => {
     it('POST /api/public-spaces - debería manejar nombres muy largos', async () => {
-      const longName = 'A'.repeat(190); // Prisma String suele ser 191 chars por defecto en MySQL, text en Postgres?
+      const longName = 'A'.repeat(190); // Prisma String suele ser 191 chars por defecto en MySQL
       // Probamos 190 que es seguro.
 
       const spaceWithLongName = {
@@ -96,7 +105,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
 
       const res = await request(app)
         .post('/api/public-spaces')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(spaceWithLongName);
 
       expect([201, 400]).toContain(res.status);
@@ -112,6 +121,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
 
       const res = await request(app)
         .post('/api/sRooms')
+        .set('Authorization', adminToken) // Added auth
         .send(roomWithZeroCapacity);
 
       expect(res.status).toBe(201); // Debería permitir capacidad 0 si lógica lo permite
@@ -127,7 +137,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
       // Group no tiene description. GroupRequest tiene description?
       const groupPayload = {
         repre_id: adminId,
-        group_request_id: groupRequestId, // Reusando el creado en beforeEach, fallará por unique?
+        group_request_id: groupRequestId, // Reusando el creado en beforeEach
         // Group -> group_request_id es unique. 
         // Necesitamos otro group request.
         reputation: 5
@@ -141,7 +151,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
 
       const res = await request(app)
         .post('/api/groups')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(groupPayload);
 
       expect(res.status).toBe(201);

@@ -28,9 +28,31 @@ jest.mock('../src/middleware/auth', () => ({
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'No autorizado' });
     if (!authHeader.startsWith('Bearer ')) return res.status(401).json({ error: 'Formato de token inválido' });
-    if (authHeader === 'Bearer invalid-token') return res.status(401).json({ error: 'Token inválido' });
 
-    // Simula usuario autenticado
+    const token = authHeader.split(' ')[1];
+
+    if (token === 'invalid-token') return res.status(401).json({ error: 'Token inválido' });
+
+    // Soporte para tokens dinámicos de prueba: "Bearer user-json:{"sub":"..."}"
+    if (token.startsWith('user-json:')) {
+      try {
+        const jsonStr = token.replace('user-json:', '');
+        req.auth = JSON.parse(jsonStr);
+        return next();
+        // eslint-disable-next-line no-unused-vars
+      } catch (e) {
+        return res.status(401).json({ error: 'Token de prueba malformado' });
+      }
+    }
+
+    // Fallback para backward compatibility (si queda algún test sin actualizar)
+    // Opcional: Podríamos eliminar esto para forzar que todos usen tokens dinámicos
+    if (token === 'valid-jwt-token' || token === 'valid-token') {
+      req.auth = { sub: 'test-user-id', email: 'test@example.com' };
+      return next();
+    }
+
+    // Default mock user if needed, or error
     req.auth = { sub: 'test-user-id', email: 'test@example.com' };
     next();
   },
@@ -38,8 +60,6 @@ jest.mock('../src/middleware/auth', () => ({
     next();
   }
 }));
-
-// ELIMINAMOS los mocks de 'usersService' y 'lib/prisma' para habilitar la integración REAL con la BD.
 
 // 2. Configuración Global de la BD
 beforeAll(async () => {
@@ -80,35 +100,6 @@ beforeEach(async () => {
     await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE;`);
   }
 
-  // 2. Poblar Datos Básicos (Compatible con tests existentes)
-  // Muchos tests esperan un Usuario con ID 1 y 'test-user-id'
-  await prisma.user.create({
-    data: {
-      id: 1, // Forzar ID 1
-      auth0_id: 'test-user-id',
-      first_name: 'Test',
-      last_name: 'User',
-      email: 'test@example.com',
-      phone: '1234567890',
-      student_number: 'S12345',
-      career: 'Ingeniería',
-      role: 'STUDENT',
-      // createdAt etc por defecto
-    }
-  });
-
-  // 3. Reiniciar Secuencia (Arreglo para error de restricción única en ID)
-  // Cuando se inserta con ID explícito, la secuencia no se actualiza automáticamente.
-  try {
-    await prisma.$executeRawUnsafe('ALTER SEQUENCE "User_id_seq" RESTART WITH 2;');
-  } catch {
-    // Fallback si el nombre de la secuencia implica tabla en minúsculas
-    try {
-      await prisma.$executeRawUnsafe('ALTER SEQUENCE "user_id_seq" RESTART WITH 2;');
-    } catch (e2) {
-      console.warn('No se pudo reiniciar la secuencia, los tests podrían fallar si crean usuarios:', e2.message);
-    }
-  }
 });
 
 afterAll(async () => {
