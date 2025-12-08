@@ -20,7 +20,7 @@ class EventFeedbackService {
 
   async getEventFeedbackByEventId(event_id) {
     const event = await prisma.eventRequest.findUnique({
-      where: { id: event_id },
+      where: { id: event_id, is_deleted: false },
     });
     if (!event) {
       throw new NotFoundError('Evento no encontrado', 'EventFeedbackService.getEventFeedbackByEventId');
@@ -33,13 +33,13 @@ class EventFeedbackService {
 
   async getEventFeedbackByGroupId(group_id) {
     const group = await prisma.group.findUnique({
-      where: { id: group_id },
+      where: { id: group_id, is_deleted: false },
     });
     if (!group) {
       throw new NotFoundError('Grupo no encontrado', 'EventFeedbackService.getEventFeedbackByGroupId');
     }
     const eventsOfGroup = await prisma.eventRequest.findMany({
-      where: { group_id: group_id },
+      where: { group_id: group_id, is_deleted: false },
       select: { id: true },
     });
     const eventIds = eventsOfGroup.map(event => event.id);
@@ -51,7 +51,7 @@ class EventFeedbackService {
 
   async getEventFeedbackByUserId(student_id) {
     const student = await prisma.user.findUnique({
-      where: { id: student_id },
+      where: { id: student_id, is_deleted: false },
     });
     if (!student) {
       throw new NotFoundError('Estudiante no encontrado', 'EventFeedbackService.getEventFeedbackByUserId');
@@ -79,14 +79,14 @@ class EventFeedbackService {
     }
         
     const eventExists = await prisma.eventRequest.findUnique({
-      where: { id: sanitizedEventId },
+      where: { id: sanitizedEventId, is_deleted: false },
     });
     if (!eventExists) {
       throw new NotFoundError('Evento no encontrado', 'EventFeedbackService.createEventFeedback');
     }
 
     const student = await prisma.user.findUnique({
-      where: { auth0_id: student_auth0_id },
+      where: { auth0_id: student_auth0_id, is_deleted: false },
       select: { id: true },
     });
     if (!student) {
@@ -132,7 +132,7 @@ class EventFeedbackService {
       });
 
       const eventsOfGroup = await tx.eventRequest.findMany({
-        where: { group_id: sanitizedGroupId },
+        where: { group_id: sanitizedGroupId, is_deleted: false },
         select: { id: true },
       });
       const eventIds = eventsOfGroup.map(event => event.id);
@@ -160,7 +160,7 @@ class EventFeedbackService {
 
   async updateOwnEventFeedback(eventFeedbackId, feedbackData, student_auth0_id) {
     const student = await prisma.user.findUnique({
-      where: { auth0_id: student_auth0_id },
+      where: { auth0_id: student_auth0_id, is_deleted: false },
       select: { id: true },
     });
     if (!student) {
@@ -205,19 +205,23 @@ class EventFeedbackService {
       }
     }
 
-    const sanitizedGroupId = existingFeedback.event_id;
-
     return await prisma.$transaction(async (tx) => {
       const updatedFeedback = await tx.feedback.update({
         where: { id: eventFeedbackId },
         data: updateData,
       });
 
+      // Obtener el evento para sacar el group_id correcto
+      const event = await tx.eventRequest.findUnique({
+        where: { id: existingFeedback.event_id, is_deleted: false },
+      });
+      const sanitizedGroupId = event.group_id;
+
       const eventsOfGroup = await tx.eventRequest.findMany({
-        where: { group_id: sanitizedGroupId },
+        where: { group_id: sanitizedGroupId, is_deleted: false },
         select: { id: true },
       });
-      const eventIds = eventsOfGroup.map(event => event.id);
+      const eventIds = eventsOfGroup.map(e => e.id);
 
       const aggregateAvg = await tx.feedback.aggregate({
         where: { event_id: { in: eventIds } },
@@ -273,19 +277,23 @@ class EventFeedbackService {
       }
     }
 
-    const sanitizedGroupId = existingFeedback.event_id;
-
     return await prisma.$transaction(async (tx) => {
       const updatedFeedback = await tx.feedback.update({
         where: { id: eventFeedbackId },
         data: updateData,
       });
 
+      // Obtener el evento para sacar el group_id correcto
+      const event = await tx.eventRequest.findUnique({
+        where: { id: existingFeedback.event_id, is_deleted: false },
+      });
+      const sanitizedGroupId = event.group_id;
+
       const eventsOfGroup = await tx.eventRequest.findMany({
-        where: { group_id: sanitizedGroupId },
+        where: { group_id: sanitizedGroupId, is_deleted: false },
         select: { id: true },
       });
-      const eventIds = eventsOfGroup.map(event => event.id);
+      const eventIds = eventsOfGroup.map(e => e.id);
 
       const aggregateAvg = await tx.feedback.aggregate({
         where: { event_id: { in: eventIds } },
@@ -309,7 +317,7 @@ class EventFeedbackService {
 
   async deleteEventFeedbackByStudent(eventFeedbackId, student_auth0_id) {
     const student = await prisma.user.findUnique({
-      where: { auth0_id: student_auth0_id },
+      where: { auth0_id: student_auth0_id, is_deleted: false },
       select: { id: true },
     });
     if (!student) {
@@ -335,12 +343,12 @@ class EventFeedbackService {
       const sanitizedEventId = existingFeedback.event_id;
 
       const event = await tx.eventRequest.findUnique({
-        where: { id: sanitizedEventId },
+        where: { id: sanitizedEventId, is_deleted: false},
       });
       const sanitizedGroupId = event.group_id;
 
       const eventsOfGroup = await tx.eventRequest.findMany({
-        where: { group_id: sanitizedGroupId },
+        where: { group_id: sanitizedGroupId, is_deleted: false },
         select: { id: true },
       });
       const eventIds = eventsOfGroup.map(event => event.id);
@@ -378,12 +386,12 @@ class EventFeedbackService {
       const sanitizedEventId = existingFeedback.event_id;
 
       const event = await tx.eventRequest.findUnique({
-        where: { id: sanitizedEventId },
+        where: { id: sanitizedEventId, is_deleted: false},
       });
       const sanitizedGroupId = event.group_id;
 
       const eventsOfGroup = await tx.eventRequest.findMany({
-        where: { group_id: sanitizedGroupId },
+        where: { group_id: sanitizedGroupId, is_deleted: false },
         select: { id: true },
       });
       const eventIds = eventsOfGroup.map(event => event.id);

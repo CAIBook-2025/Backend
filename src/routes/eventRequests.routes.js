@@ -30,6 +30,8 @@ router.get('/', checkJwt, async (req, res) => {
       where.group_id = Number(group_id);
     }
 
+    where.is_deleted = false;
+
     const items = await prisma.eventRequest.findMany({ 
       where,
       orderBy: { createdAt: 'desc' },
@@ -95,7 +97,7 @@ router.get('/:id', checkJwt, async (req, res) => {
     }
     
     const item = await prisma.eventRequest.findUnique({ 
-      where: { id },
+      where: { id, is_deleted: false },
       include: {
         group: {
           include: {
@@ -139,7 +141,7 @@ router.get('/:id', checkJwt, async (req, res) => {
     
     const moderators = moderatorIds.length > 0 
       ? await prisma.user.findMany({
-        where: { id: { in: moderatorIds } },
+        where: { id: { in: moderatorIds }, is_deleted: false },
         select: { 
           id: true, 
           first_name: true, 
@@ -151,7 +153,7 @@ router.get('/:id', checkJwt, async (req, res) => {
 
     // Obtener representante
     const representative = await prisma.user.findUnique({
-      where: { id: item.group.repre_id },
+      where: { id: item.group.repre_id, is_deleted: false },
       select: { 
         id: true, 
         first_name: true, 
@@ -227,7 +229,7 @@ router.post('/', checkJwt, async (req, res) => {
 
     // Obtener usuario autenticado
     const user = await prisma.user.findUnique({
-      where: { auth0_id: req.auth.sub }
+      where: { auth0_id: req.auth.sub, is_deleted: false }
     });
 
     if (!user) {
@@ -236,7 +238,7 @@ router.post('/', checkJwt, async (req, res) => {
 
     // Verificar que el grupo existe y el usuario tiene permisos
     const group = await prisma.group.findUnique({
-      where: { id: group_id }
+      where: { id: group_id, is_deleted: false }
     });
 
     if (!group) {
@@ -275,7 +277,8 @@ router.post('/', checkJwt, async (req, res) => {
     const pendingRequestsCount = await prisma.eventRequest.count({
       where: {
         group_id,
-        status: 'PENDING'
+        status: 'PENDING',
+        is_deleted: false
       }
     });
 
@@ -291,7 +294,8 @@ router.post('/', checkJwt, async (req, res) => {
         public_space_id,
         day: eventDay,
         module,
-        status: { in: ['PENDING', 'CONFIRMED'] }
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        is_deleted: false
       }
     });
 
@@ -426,7 +430,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
 
     // Obtener la solicitud existente
     const existingRequest = await prisma.eventRequest.findUnique({
-      where: { id },
+      where: { id, is_deleted: false },
       include: {
         group: true,
         publicSpace: true
@@ -439,7 +443,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
 
     // Obtener usuario autenticado
     const user = await prisma.user.findUnique({
-      where: { auth0_id: req.auth.sub }
+      where: { auth0_id: req.auth.sub, is_deleted: false }
     });
 
     // Verificar permisos
@@ -485,7 +489,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
       const result = await prisma.$transaction(async (tx) => {
         // Actualizar solicitud
         const updatedRequest = await tx.eventRequest.update({
-          where: { id },
+          where: { id, is_deleted: false },
           data: { status: 'CONFIRMED' },
           include: {
             group: {
@@ -547,7 +551,7 @@ router.patch('/:id', checkJwt, async (req, res) => {
     }
 
     const updated = await prisma.eventRequest.update({ 
-      where: { id }, 
+      where: { id, is_deleted: false }, 
       data: dataToUpdate,
       include: {
         group: {

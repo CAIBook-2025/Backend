@@ -1,9 +1,20 @@
 // src/lib/prisma.js
-const { PrismaClient } = require('@prisma/client'); // Max: tuve que cambiar esta ruta para que me pescara la db, si no funciona, chequear esto
+const { PrismaClient } = require('@prisma/client');
 
 let prisma;
 if (process.env.NODE_ENV === 'production') {
   prisma = new PrismaClient({ log: ['error'] });
+} else if (process.env.NODE_ENV === 'test') {
+  // En test, usamos la URL de test
+  prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.TEST_DATABASE_URL,
+      },
+    },
+    // Menos logs en test para no ensuciar la salida
+    log: ['warn', 'error'],
+  });
 } else {
   // Evita crear múltiples clientes en dev (nodemon)
   if (!global.__prisma) {

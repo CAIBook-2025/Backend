@@ -43,6 +43,9 @@ jobs:
       
     # 5. Ejecutar tests unitarios
     - name: Run tests
+      env:
+        # 1. Inyectamos la URL real desde los Secretos de GitHub
+        TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
       run: npm test
         
     # 7. Verificar vulnerabilidades de seguridad
