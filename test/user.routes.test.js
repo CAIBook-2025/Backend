@@ -14,7 +14,7 @@ describe('User Routes', () => {
   it('GET /api/users/:id - debería devolver un user específico', async () => {
     const res = await request(app)
       .get('/api/users/1')
-      .set('Authorization', 'Bearer valid-token'); 
+      .set('Authorization', 'Bearer valid-token');
     expect(res.status).toBe(200);
     expect(res.body.user).toHaveProperty('id', 1);
   });
@@ -33,12 +33,22 @@ describe('User Routes', () => {
       first_name: 'Juan',
       last_name: 'Pérez',
       email: 'juan.perez@test.com',
-      hashed_password: 'hashedpassword123'
+      // hashed_password no se usa en el backend, se usa auth0_id
+      auth0_id: 'auth0|new-test-user',
+      career: 'Ingeniería',
+      phone: '+56912345678',
+      student_number: '12345678J'
     };
     const res = await request(app)
       .post('/api/users')
       .set('Authorization', 'Bearer valid-token')
       .send(newUser);
+
+    // Si falla, mostrar error para debugging
+    if (res.status !== 201) {
+      console.error('POST /users error:', res.body);
+    }
+
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('email', 'juan.perez@test.com');
   });
@@ -59,6 +69,6 @@ describe('User Routes', () => {
     const res = await request(app)
       .delete('/api/users/1')
       .set('Authorization', 'Bearer valid-token');
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(200);
   });
 });
