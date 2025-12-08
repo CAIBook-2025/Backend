@@ -3,18 +3,42 @@ const app = require('../src/app');
 const { prisma } = require('../src/lib/prisma');
 
 describe('History Routes', () => {
-  let userId = 1; // Default mock user from setup.js
+  let adminUser, adminToken;
+  let studentUser, studentToken;
   let srId;
 
   beforeEach(async () => {
-    // 1. Asegurar que User 1 existe (setup.js lo crea)
-    // Promover a ADMIN para probar rutas protegidas de admin también
-    await prisma.user.update({
-      where: { id: userId },
-      data: { role: 'ADMIN' }
+    // 1. Crear Admin (para history/groups-created)
+    adminUser = await prisma.user.create({
+      data: {
+        first_name: 'Admin',
+        last_name: 'History',
+        email: 'admin.history@test.com',
+        auth0_id: 'auth0|admin-history',
+        role: 'ADMIN',
+        phone: '12345678',
+        student_number: 'ADM-HIS',
+        career: 'Admin'
+      }
     });
+    adminToken = `Bearer user-json:${JSON.stringify({ sub: adminUser.auth0_id, email: adminUser.email })}`;
 
-    // 2. Crear Sala de Estudio
+    // 2. Crear Student (para history/study-rooms)
+    studentUser = await prisma.user.create({
+      data: {
+        first_name: 'Student',
+        last_name: 'History',
+        email: 'student.history@test.com',
+        auth0_id: 'auth0|student-history',
+        role: 'STUDENT',
+        phone: '87654321',
+        student_number: 'STD-HIS',
+        career: 'Ingeniería'
+      }
+    });
+    studentToken = `Bearer user-json:${JSON.stringify({ sub: studentUser.auth0_id, email: studentUser.email })}`;
+
+    // 3. Crear Sala de Estudio
     const sr = await prisma.studyRoom.create({
       data: {
         name: 'History Test Room',
@@ -24,11 +48,11 @@ describe('History Routes', () => {
     });
     srId = sr.id;
 
-    // 3. Crear Reserva para historial de salas
+    // 4. Crear Reserva para historial de salas (del estudiante)
     await prisma.sRScheduling.create({
       data: {
         sr_id: srId,
-        user_id: userId,
+        user_id: studentUser.id,
         day: new Date(),
         module: 1,
         status: 'PRESENT',
@@ -41,7 +65,7 @@ describe('History Routes', () => {
     it('debería devolver el historial de reservas', async () => {
       const res = await request(app)
         .get('/api/history/study-rooms')
-        .set('Authorization', 'Bearer valid-jwt-token');
+        .set('Authorization', studentToken);
 
       expect(res.status).toBe(200);
       expect(res.body.studyRooms).toHaveLength(1);
@@ -51,10 +75,10 @@ describe('History Routes', () => {
 
   describe('GET /api/history/groups-created', () => {
     it('debería devolver historial de grupos (req ADMIN)', async () => {
-      // Crear datos necesarios: GroupRequest, Group
+      // Crear datos necesarios: GroupRequest, Group (using Admin as creator/approver context)
       const gr = await prisma.groupRequest.create({
         data: {
-          user_id: userId,
+          user_id: adminUser.id, // Admin created this request? Or someone else.
           name: 'History Group',
           goal: 'Test',
           status: 'CONFIRMED'
@@ -64,14 +88,14 @@ describe('History Routes', () => {
       await prisma.group.create({
         data: {
           group_request_id: gr.id,
-          repre_id: userId,
+          repre_id: adminUser.id,
           reputation: 5.0
         }
       });
 
       const res = await request(app)
         .get('/api/history/groups-created')
-        .set('Authorization', 'Bearer valid-jwt-token');
+        .set('Authorization', adminToken);
 
       expect(res.status).toBe(200);
       expect(res.body.groups).toHaveLength(1);

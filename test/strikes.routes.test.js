@@ -4,14 +4,14 @@ const { prisma } = require('../src/lib/prisma');
 
 describe('Strikes Routes', () => {
   let createdStrikeId;
-  let adminId;
+  let adminId, adminToken;
   let studentId;
 
   beforeEach(async () => {
     // 1. Crear Admin
     const admin = await prisma.user.create({
       data: {
-        auth0_id: 'admin-strikes-test',
+        auth0_id: 'auth0|admin-strikes-test',
         first_name: 'Admin',
         last_name: 'User',
         email: 'admin.strikes@test.com',
@@ -22,11 +22,12 @@ describe('Strikes Routes', () => {
       }
     });
     adminId = admin.id;
+    adminToken = `Bearer user-json:${JSON.stringify({ sub: admin.auth0_id, email: admin.email })}`;
 
     // 2. Crear Estudiante
     const student = await prisma.user.create({
       data: {
-        auth0_id: 'student-strikes-test',
+        auth0_id: 'auth0|student-strikes-test',
         first_name: 'Student',
         last_name: 'User',
         email: 'student.strikes@test.com',
@@ -56,7 +57,7 @@ describe('Strikes Routes', () => {
   it('GET /api/strikes - debería devolver todos los strikes', async () => {
     const res = await request(app)
       .get('/api/strikes')
-      .set('Authorization', 'Bearer valid-jwt-token'); // Auth required usually
+      .set('Authorization', adminToken); // Auth required usually
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
@@ -64,7 +65,7 @@ describe('Strikes Routes', () => {
   it('GET /api/strikes/:id - debería devolver un strike específico', async () => {
     const res = await request(app)
       .get(`/api/strikes/${createdStrikeId}`)
-      .set('Authorization', 'Bearer valid-jwt-token');
+      .set('Authorization', adminToken);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', createdStrikeId);
   });
@@ -78,7 +79,7 @@ describe('Strikes Routes', () => {
     };
     const res = await request(app)
       .post('/api/strikes')
-      .set('Authorization', 'Bearer valid-jwt-token')
+      .set('Authorization', adminToken)
       .send(newStrike);
 
     if (res.status !== 201) console.error('POST Error:', res.body);
@@ -93,7 +94,7 @@ describe('Strikes Routes', () => {
     };
     const res = await request(app)
       .patch(`/api/strikes/${createdStrikeId}`)
-      .set('Authorization', 'Bearer valid-jwt-token')
+      .set('Authorization', adminToken)
       .send(updatedStrike);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('type', 'DAMAGE');
@@ -102,7 +103,7 @@ describe('Strikes Routes', () => {
   it('DELETE /api/strikes/:id - debería eliminar un strike', async () => {
     const res = await request(app)
       .delete(`/api/strikes/${createdStrikeId}`)
-      .set('Authorization', 'Bearer valid-jwt-token');
+      .set('Authorization', adminToken);
     expect([200, 204]).toContain(res.status);
   });
 });

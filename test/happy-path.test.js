@@ -3,216 +3,212 @@ const app = require('../src/app');
 const { prisma } = require('../src/lib/prisma');
 
 describe('Happy Path Tests - Flujos exitosos completos', () => {
+  let adminUser, adminToken;
+  let repreUser, repreToken;
 
-  describe('Flujo completo de creación de usuario y grupo', () => {
-    it('Debería crear un usuario y luego crear un grupo con ese usuario como representante', async () => {
-      // 0. Promover al usuario del token (User 1) a ADMIN para poder crear grupo
-      await prisma.user.update({
-        where: { id: 1 },
-        data: { role: 'ADMIN' }
-      });
+  beforeEach(async () => {
+    // Crear Admin
+    adminUser = await prisma.user.create({
+      data: {
+        first_name: 'Admin',
+        last_name: 'Super',
+        email: 'admin.happy@test.com',
+        auth0_id: 'auth0|admin-happy',
+        role: 'ADMIN',
+        phone: '99999999',
+        student_number: 'ADM999',
+        career: 'Admin'
+      }
+    });
+    adminToken = `Bearer user-json:${JSON.stringify({ sub: adminUser.auth0_id, email: adminUser.email })}`;
 
-      // 1. Crear usuario (el que será representante)
-      const newUser = {
-        email: 'representante@test.com',
-        hashed_password: 'password123',
+    // Crear Representante
+    repreUser = await prisma.user.create({
+      data: {
         first_name: 'María',
         last_name: 'González',
-        phone: '12345678',
-        auth0_id: 'auth0|happy-path-1',
-        career: 'Ingeniería',
-        student_number: '123456'
+        email: 'repre.happy@test.com',
+        auth0_id: 'auth0|repre-happy',
+        role: 'STUDENT',
+        phone: '88888888',
+        student_number: 'STD888',
+        career: 'Ingeniería'
+      }
+    });
+    repreToken = `Bearer user-json:${JSON.stringify({ sub: repreUser.auth0_id, email: repreUser.email })}`;
+  });
+
+  describe('Flujo completo de creación de usuario y grupo', () => {
+    it('Debería crear solicitud de grupo, admin aprueba y se crea grupo automágicamente', async () => {
+      // 1. Estudiante crea solicitud de grupo
+      const groupRequestData = {
+        name: 'Grupo Happy Path',
+        goal: 'Estudiar para pruebas',
+        description: 'Grupo dedicado al estudio intenso'
       };
 
-      const userResponse = await request(app)
-        .post('/api/users')
-        .set('Authorization', 'Bearer valid-jwt-token')
-        .send(newUser);
+      const requestResponse = await request(app)
+        .post('/api/group-requests')
+        .set('Authorization', repreToken)
+        .send(groupRequestData);
 
-      expect(userResponse.status).toBe(201);
-      expect(userResponse.body).toHaveProperty('id');
-      const userId = userResponse.body.id;
+      if (requestResponse.status !== 201) console.error('Error creando Request:', requestResponse.body);
+      expect(requestResponse.status).toBe(201);
+      const requestId = requestResponse.body.id;
 
-      // 1.6. Crear solicitud de grupo previa (requisito para crear grupo)
-      // El user_id debe ser el del representante
-      const groupRequest = await prisma.groupRequest.create({
-        data: {
-          user_id: userId,
-          name: 'Grupo de estudio',
-          goal: 'Estudiar mucho',
-          status: 'CONFIRMED'
-        }
+      // 2. Admin confirma la solicitud
+      const confirmResponse = await request(app)
+        .patch(`/api/group-requests/${requestId}`)
+        .set('Authorization', adminToken)
+        .send({ status: 'CONFIRMED' });
+
+      if (confirmResponse.status !== 200) console.error('Error confirmando Request:', confirmResponse.body);
+      expect(confirmResponse.status).toBe(200);
+      expect(confirmResponse.body.status).toBe('CONFIRMED');
+
+      // 3. Verificar que el grupo se creó automáticamente
+      const groupCheck = await prisma.group.findFirst({
+        where: { group_request_id: requestId }
       });
 
-      // 2. Crear grupo
-      const newGroup = {
-        repre_id: userId,
-        group_request_id: groupRequest.id,
-        reputation: 5
-      };
-
-      const groupResponse = await request(app)
-        .post('/api/groups')
-        .set('Authorization', 'Bearer valid-jwt-token')
-        .send(newGroup);
-
-      if (groupResponse.status !== 201) console.error('Error Grupo:', groupResponse.body);
-      expect(groupResponse.status).toBe(201);
-      expect(groupResponse.body).toHaveProperty('repre_id', userId);
+      expect(groupCheck).not.toBeNull();
+      expect(groupCheck.repre_id).toBe(repreUser.id);
     });
   });
 
   describe('Flujo completo de solicitud de evento', () => {
-    it('Debería crear grupo, espacio público y luego solicitar evento', async () => {
-      // 0. Promover al usuario del token (User 1) a ADMIN
-      await prisma.user.update({
-        where: { id: 1 },
-        data: { role: 'ADMIN' }
-      });
+    it('Debería crear grupo (flujo admin), espacio público y luego solicitar evento', async () => {
+      // 1. Preparar Grupo (Flujo correcto: Request -> Confirm)
+      const grData = {
+        user_id: repreUser.id,
+        name: 'Grupo Eventos Happy',
+        goal: 'Organizar eventos',
+        status: 'PENDING'
+      };
+      const groupRequest = await prisma.groupRequest.create({ data: grData });
 
-      // 1. Crear Usuario Admin (para ser representante del grupo)
-      const admin = await prisma.user.create({
-        data: {
-          auth0_id: 'admin-happy-event',
-          first_name: 'Admin',
-          last_name: 'Event',
-          email: 'admin.event@test.com',
-          role: 'ADMIN',
-          phone: '99999999',
-          student_number: '999999',
-          career: 'Admin'
-        }
-      });
+      // Admin confirma y crea grupo (simulado via servicio/prisma para agilizar, o via endpoint)
+      // Via endpoint para ser fiel al happy path de integración
+      const confirmRes = await request(app)
+        .patch(`/api/group-requests/${groupRequest.id}`)
+        .set('Authorization', adminToken)
+        .send({ status: 'CONFIRMED' });
+      expect(confirmRes.status).toBe(200);
 
-      // 2. Crear espacio público
+      // Obtener el ID del grupo creado
+      const group = await prisma.group.findFirst({ where: { group_request_id: groupRequest.id } });
+      expect(group).toBeTruthy();
+      const groupId = group.id;
+
+      // 2. Crear espacio público (Solo admin)
       const newSpace = {
-        name: 'Auditorio Central',
+        name: 'Auditorio Happy',
         capacity: 150,
-        location: 'Campus Central',
+        location: 'Campus Norte',
         available: 'AVAILABLE'
       };
 
-      // Simular token de admin (se requiere autenticación/admin para spaces)
       const spaceResponse = await request(app)
         .post('/api/public-spaces')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(newSpace);
 
+      if (spaceResponse.status !== 201) console.error('Error creando Space:', spaceResponse.body);
       expect(spaceResponse.status).toBe(201);
       const spaceId = spaceResponse.body.id;
 
-      // 3. Crear grupo (con dependencias)
-      const groupRequest = await prisma.groupRequest.create({
-        data: {
-          user_id: admin.id,
-          name: 'Grupo Eventos',
-          goal: 'Organizar',
-          status: 'CONFIRMED'
-        }
-      });
-
-      const newGroup = {
-        repre_id: admin.id,
-        group_request_id: groupRequest.id,
-        reputation: 5
-      };
-
-      const groupResponse = await request(app)
-        .post('/api/groups')
-        .set('Authorization', 'Bearer valid-jwt-token')
-        .send(newGroup);
-
-      expect(groupResponse.status).toBe(201);
-      const groupId = groupResponse.body.id;
-
-      // 4. Solicitar evento
-      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // Mañana
+      // 3. Solicitar evento (como representante del grupo)
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       const eventRequest = {
         group_id: groupId,
         public_space_id: spaceId,
-        name: 'Torneo de Debate Universitario',
-        goal: 'Competencia de debate entre estudiantes',
-        description: 'Evento académico de debate',
+        name: 'Torneo de Debate Happy',
+        goal: 'Debatir felizmente',
+        description: 'Evento de prueba',
         day: futureDate.toISOString(),
         module: 1,
         n_attendees: 80
       };
 
-      // NOTA: POST /api/events es la ruta correcta según eventRequests.routes.test.js
-      // Pero el endpoint real es /api/events en app.js que monta eventRequestsRouter
       const requestResponse = await request(app)
         .post('/api/events')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', repreToken) // Representante solicita
         .send(eventRequest);
 
       if (requestResponse.status !== 201) console.error('Error Evento:', requestResponse.body);
       expect(requestResponse.status).toBe(201);
-      expect(requestResponse.body).toHaveProperty('name', 'Torneo de Debate Universitario');
+      expect(requestResponse.body).toHaveProperty('name', 'Torneo de Debate Happy');
     });
   });
 
   describe('Flujo completo de reserva de sala de estudio', () => {
     it('Debería crear sala de estudio y hacer reserva exitosa', async () => {
-      // 0. Crear Usuario (requerido para reserva)
-      const user = await prisma.user.create({
+      // 1. Crear usuario Estudiante para reserva (podemos usar repreUser o crear otro)
+      const studyUser = await prisma.user.create({
         data: {
-          auth0_id: 'user-happy-room',
-          first_name: 'Room',
-          last_name: 'User',
-          email: 'room.user@test.com',
-          role: 'ADMIN', // Para crear la sala
-          phone: '11111111',
-          student_number: '111111',
-          career: 'Estudio'
+          first_name: 'Estudioso',
+          last_name: 'Room',
+          email: 'study.room@test.com',
+          auth0_id: 'auth0|study-room',
+          role: 'STUDENT',
+          phone: '77777777',
+          student_number: 'STD777',
+          career: 'Medicina'
         }
       });
+      // El endpoint de booking a veces usa el user del token o el body.
+      const studyToken = `Bearer user-json:${JSON.stringify({ sub: studyUser.auth0_id, email: studyUser.email })}`;
 
-      // 1. Crear sala de estudio
+      // 2. Crear sala de estudio (Admin)
       const newRoom = {
-        name: 'Sala de Estudio Premium',
-        capacity: 8,
-        location: 'Biblioteca',
-        equipment: ['Proyector', 'Pizarra Digital']
+        name: 'Sala de Estudio Happy',
+        capacity: 5,
+        location: 'Biblioteca Sur',
+        equipment: ['Pizarra']
       };
 
-      // POST /api/sRooms
       const roomResponse = await request(app)
         .post('/api/sRooms')
-        .set('Authorization', 'Bearer valid-jwt-token')
+        .set('Authorization', adminToken)
         .send(newRoom);
 
       expect(roomResponse.status).toBe(201);
       const roomId = roomResponse.body.id;
 
-      // 2. Crear Horario (Schedule) - Paso intermedio necesario en DB real
-      const futureDay = new Date(Date.now() + 24 * 60 * 60 * 1000); // Mañana
+      // 3. Crear Horario (Schedule)
+      const futureDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const scheduleData = {
         srId: roomId,
-        day: futureDay.toISOString(), // YYYY-MM-DDT...
-        module: 1, // Int
+        day: futureDay.toISOString(),
+        module: 1,
         available: 'AVAILABLE'
       };
 
       const scheduleResponse = await request(app)
         .post('/api/srSchedule')
+        .set('Authorization', adminToken) // Asunto admin
         .send(scheduleData);
 
       expect(scheduleResponse.status).toBe(201);
       const scheduleId = scheduleResponse.body.id;
 
-      // 3. Reservar (Book)
+      // 4. Reservar (Book)
       const bookData = {
-        userId: user.id,
+        userId: studyUser.id,
         id: scheduleId
       };
 
+      // Nota: El test original usaba PATCH /api/srSchedule/book
+      // Verificaremos si requiere auth.
       const bookResponse = await request(app)
         .patch('/api/srSchedule/book')
+        .set('Authorization', studyToken)
         .send(bookData);
 
+      if (bookResponse.status !== 200) console.error('Error Booking:', bookResponse.body);
       expect(bookResponse.status).toBe(200);
-      expect(bookResponse.body).toHaveProperty('user_id', user.id);
+      expect(bookResponse.body).toHaveProperty('user_id', studyUser.id);
       expect(bookResponse.body).toHaveProperty('available', 'UNAVAILABLE');
     });
   });

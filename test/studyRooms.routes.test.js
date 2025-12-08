@@ -4,14 +4,23 @@ const { prisma } = require('../src/lib/prisma');
 
 describe('Study Rooms Routes', () => {
   let createdRoomId;
-  let userId = 1;
+  let adminUser, adminToken;
 
   beforeEach(async () => {
-    // 1. Promover a ADMIN
-    await prisma.user.update({
-      where: { id: userId },
-      data: { role: 'ADMIN' }
+    // 1. Crear Admin
+    adminUser = await prisma.user.create({
+      data: {
+        first_name: 'Admin',
+        last_name: 'Room',
+        email: 'admin.room@test.com',
+        auth0_id: 'auth0|admin-room',
+        role: 'ADMIN',
+        phone: '12345678',
+        student_number: 'ADM-ROM',
+        career: 'Admin'
+      }
     });
+    adminToken = `Bearer user-json:${JSON.stringify({ sub: adminUser.auth0_id, email: adminUser.email })}`;
 
     // 2. Crear Sala de Estudio
     const sr = await prisma.studyRoom.create({
@@ -48,7 +57,7 @@ describe('Study Rooms Routes', () => {
     };
     const res = await request(app)
       .post('/api/sRooms')
-      .set('Authorization', 'Bearer valid-jwt-token')
+      .set('Authorization', adminToken)
       .send(newStudyRoom);
 
     expect(res.status).toBe(201);
@@ -62,7 +71,7 @@ describe('Study Rooms Routes', () => {
     };
     const res = await request(app)
       .patch(`/api/sRooms/${createdRoomId}`)
-      .set('Authorization', 'Bearer valid-jwt-token') // Added Auth
+      .set('Authorization', adminToken)
       .send(updatedStudyRoom);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('name', 'Sala actualizada');
@@ -71,7 +80,7 @@ describe('Study Rooms Routes', () => {
   it('DELETE /api/sRooms/:id - debería eliminar una study room', async () => {
     const res = await request(app)
       .delete(`/api/sRooms/${createdRoomId}`)
-      .set('Authorization', 'Bearer valid-jwt-token'); // Added Auth
+      .set('Authorization', adminToken);
     expect([200, 204]).toContain(res.status);
   });
 });
