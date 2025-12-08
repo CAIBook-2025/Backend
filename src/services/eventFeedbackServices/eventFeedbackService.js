@@ -205,19 +205,23 @@ class EventFeedbackService {
       }
     }
 
-    const sanitizedGroupId = existingFeedback.event_id;
-
     return await prisma.$transaction(async (tx) => {
       const updatedFeedback = await tx.feedback.update({
         where: { id: eventFeedbackId },
         data: updateData,
       });
 
+      // Obtener el evento para sacar el group_id correcto
+      const event = await tx.eventRequest.findUnique({
+        where: { id: existingFeedback.event_id, is_deleted: false },
+      });
+      const sanitizedGroupId = event.group_id;
+
       const eventsOfGroup = await tx.eventRequest.findMany({
         where: { group_id: sanitizedGroupId, is_deleted: false },
         select: { id: true },
       });
-      const eventIds = eventsOfGroup.map(event => event.id);
+      const eventIds = eventsOfGroup.map(e => e.id);
 
       const aggregateAvg = await tx.feedback.aggregate({
         where: { event_id: { in: eventIds } },
@@ -273,19 +277,23 @@ class EventFeedbackService {
       }
     }
 
-    const sanitizedGroupId = existingFeedback.event_id;
-
     return await prisma.$transaction(async (tx) => {
       const updatedFeedback = await tx.feedback.update({
         where: { id: eventFeedbackId },
         data: updateData,
       });
 
+      // Obtener el evento para sacar el group_id correcto
+      const event = await tx.eventRequest.findUnique({
+        where: { id: existingFeedback.event_id, is_deleted: false },
+      });
+      const sanitizedGroupId = event.group_id;
+
       const eventsOfGroup = await tx.eventRequest.findMany({
         where: { group_id: sanitizedGroupId, is_deleted: false },
         select: { id: true },
       });
-      const eventIds = eventsOfGroup.map(event => event.id);
+      const eventIds = eventsOfGroup.map(e => e.id);
 
       const aggregateAvg = await tx.feedback.aggregate({
         where: { event_id: { in: eventIds } },
