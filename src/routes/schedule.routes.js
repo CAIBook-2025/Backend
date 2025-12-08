@@ -71,7 +71,7 @@ router.get('/my/:userId', async (req, res) => {
     } = req.query;
 
     // Construcción del filtro
-    const where = { user_id: Number(userId) };
+    const where = { user_id: Number(userId), is_deleted: false };
     if (status) where.status = status; // enum RequestStatus
 
     // Rango de fechas
@@ -356,7 +356,7 @@ router.patch('/enable', async (req, res) => {
       return res.status(400).json({ error: 'ID inválido' });
     }
 
-    const user = await prisma.User.findUnique({ where: { id: adminId } });
+    const user = await prisma.User.findUnique({ where: { id: adminId, is_deleted: false } });
 
     if (user.role !== 'ADMIN') {
       return res.status(401).json({ error: 'Unauthorized, must be a CAI admin' });
@@ -392,7 +392,7 @@ router.patch('/disable', async (req, res) => {
       return res.status(400).json({ error: 'ID inválido' });
     }
 
-    const user = await prisma.User.findUnique({ where: { id: adminId } });
+    const user = await prisma.User.findUnique({ where: { id: adminId, is_deleted: false } });
 
     if (user.role !== 'ADMIN') {
       return res.status(401).json({ error: 'Unauthorized, must be a CAI admin' });

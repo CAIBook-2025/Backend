@@ -748,7 +748,7 @@ router.delete('/my-groups/:id', checkJwt, async (req, res) => {
 
     // Verificar si el grupo tiene eventos asociados
     const eventCount = await prisma.eventRequest.count({
-      where: { group_id: id }
+      where: { group_id: id  }
     });
 
     if (eventCount > 0) {

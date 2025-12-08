@@ -50,6 +50,7 @@ router.post('/', async (req, res) => {
     const student = await prisma.user.findUnique({
       where: { 
         email: student_email,
+        is_deleted: false
       }
     });
 
@@ -60,6 +61,7 @@ router.post('/', async (req, res) => {
     const admin = await prisma.user.findUnique({
       where: { 
         email: admin_email,
+        is_deleted: false,
         OR: [
           { role: 'ADMIN' }
         ]
