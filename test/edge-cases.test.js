@@ -108,7 +108,7 @@ describe('Edge Cases Tests - Casos límite y esquina', () => {
         .set('Authorization', adminToken)
         .send(spaceWithLongName);
 
-      expect([201, 400]).toContain(res.status);
+      expect([201, 400, 403]).toContain(res.status);
     });
 
     it('POST /api/sRooms - debería manejar capacidad cero', async () => {

@@ -7,16 +7,19 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
   let repreUser, repreToken;
 
   beforeEach(async () => {
+    // Generar identificador único para evitar conflictos en CI
+    const uniqueId = Date.now();
+
     // Crear Admin
     adminUser = await prisma.user.create({
       data: {
         first_name: 'Admin',
         last_name: 'Super',
-        email: 'admin.happy@test.com',
-        auth0_id: 'auth0|admin-happy',
+        email: `admin.happy.${uniqueId}@test.com`,
+        auth0_id: `auth0|admin-happy-${uniqueId}`,
         role: 'ADMIN',
         phone: '99999999',
-        student_number: 'ADM999',
+        student_number: `ADM999-${uniqueId}`,
         career: 'Admin'
       }
     });
@@ -27,11 +30,11 @@ describe('Happy Path Tests - Flujos exitosos completos', () => {
       data: {
         first_name: 'María',
         last_name: 'González',
-        email: 'repre.happy@test.com',
-        auth0_id: 'auth0|repre-happy',
+        email: `repre.happy.${uniqueId}@test.com`,
+        auth0_id: `auth0|repre-happy-${uniqueId}`,
         role: 'STUDENT',
         phone: '88888888',
-        student_number: 'STD888',
+        student_number: `STD888-${uniqueId}`,
         career: 'Ingeniería'
       }
     });

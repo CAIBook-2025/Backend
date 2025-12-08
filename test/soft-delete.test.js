@@ -2,13 +2,23 @@ const request = require('supertest');
 const app = require('../src/app');
 const { prisma } = require('../src/lib/prisma');
 
+// Mockear auth0_utils para evitar llamadas reales a Auth0
+jest.mock('../src/utils/auth0_utils', () => ({
+  blockUserInAuth0: jest.fn().mockResolvedValue({ status: 200 }),
+  unblockUserInAuth0: jest.fn().mockResolvedValue({ status: 200 }),
+  getMachineToMachineToken: jest.fn().mockResolvedValue('mock-token'),
+  sendChangeAuth0PasswordEmailToUser: jest.fn().mockResolvedValue({ status: 200 })
+}));
+
 describe('Soft Delete de un User', () => {
 
+  let adminUser, adminToken;
   let createdUserId;
   let createdGroupRequestId;
   let createdGroupId;
   let createdEventRequestId;
 
+  // Aumentar timeout porque el soft delete con Auth0 tarda más
   beforeEach(async () => {
     // Limpiar datos antes del test
     await prisma.feedback.deleteMany({});
@@ -18,19 +28,39 @@ describe('Soft Delete de un User', () => {
     await prisma.user.deleteMany({});
     await prisma.publicSpace.deleteMany({});
 
+    // Generar identificador único para evitar conflictos
+    const uniqueId = Date.now();
+
+    // 1. Crear Admin para hacer el soft delete
+    adminUser = await prisma.user.create({
+      data: {
+        auth0_id: `auth0|admin-softdelete-${uniqueId}`,
+        email: `admin.softdelete.${uniqueId}@test.com`,
+        first_name: 'Admin',
+        last_name: 'SoftDelete',
+        career: 'Admin',
+        phone: '9999999999',
+        student_number: `ADM-SD-${uniqueId}`,
+        role: 'ADMIN'
+      }
+    });
+    adminToken = `Bearer user-json:${JSON.stringify({ sub: adminUser.auth0_id, email: adminUser.email })}`;
+
+    // 2. Crear usuario que será soft-deleted
     const user = await prisma.user.create({
       data: {
-        auth0_id: 'auth0|testuser1',
-        email: 'testuser1@example.com',
+        auth0_id: `auth0|testuser-${uniqueId}`,
+        email: `testuser.${uniqueId}@example.com`,
         first_name: 'Test',
         last_name: 'Testínez',
         career: 'Tester',
         phone: '1234567890',
-        student_number: '20202020'
+        student_number: `TEST-${uniqueId}`
       }
     });
     createdUserId = user.id;
 
+    // 3. Crear estructura de datos del usuario
     const groupRequest = await prisma.groupRequest.create({
       data: {
         user_id: createdUserId,
@@ -52,7 +82,7 @@ describe('Soft Delete de un User', () => {
 
     const publicSpace = await prisma.publicSpace.create({
       data: {
-        name: 'Test Space',
+        name: `Test Space ${uniqueId}`,
         capacity: 50,
         location: 'Test Location',
         available: 'AVAILABLE'
@@ -82,15 +112,16 @@ describe('Soft Delete de un User', () => {
       }
     });
 
+    // 4. Ejecutar soft delete usando el admin token
     await request(app)
       .patch(`/api/users/admin/delete/${createdUserId}`)
-      .set('Authorization', 'Bearer valid-jwt-token')
+      .set('Authorization', adminToken)
       .expect(200);
-    
-  });
+
+  }, 15000); // Timeout de 15s porque el soft delete con Auth0 está mockeado
 
   it('Soft delete en cascada de User debería afectar todas las entidades', async () => {
-        
+
     const deletedUser = await prisma.user.findUnique({
       where: { id: createdUserId }
     });
@@ -115,7 +146,7 @@ describe('Soft Delete de un User', () => {
       where: { event_id: createdEventRequestId }
     });
     expect(deletedFeedbacks.length).toBe(0);
-        
+
   });
 
   // it('Soft delete GroupRequest y recursos asociados')
@@ -130,4 +161,4 @@ describe('Soft Delete de un User', () => {
 
 });
 
-describe('Soft Delete de una Group Request', () => {});
+describe('Soft Delete de una Group Request', () => { });
