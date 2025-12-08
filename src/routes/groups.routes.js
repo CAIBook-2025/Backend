@@ -1,6 +1,8 @@
 const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
-const { checkJwt } = require('../middleware/auth');
+const { checkJwt, checkAdmin } = require('../middleware/auth');
+const groupDeleter = require('../services/groupServices/groupDeleter');
+const errorHandler = require('../utils/errorHandler');
 
 const router = Router();
 
@@ -933,6 +935,29 @@ router.patch('/my-groups/transfer-representative/:id', checkJwt, async (req, res
       details: error.message
     });
   }
+
+  // PATCH /groups/delete/:id - Soft delete grupo propio (representante)
+  router.patch('/delete/:id', checkJwt, async (req, res) => {
+    try {
+      const group_id = Number(req.params.id);
+      const representative_auth0_id = req.auth.sub;  
+      const result = await groupDeleter.softDeleteGroupAsRepresentative(group_id, representative_auth0_id);
+      res.json(result);
+    } catch (error) {
+      errorHandler.handleControllerError(res, error, 'PATCH /groups/delete/:id', 'No se pudo eliminar el grupo');
+    }
+  });
+
+  // PATCH /groups/admin/delete/:id - Soft delete grupo (admin)
+  router.patch('/admin/delete/:id', checkJwt, checkAdmin, async (req, res) => {
+    try {
+      const group_id = Number(req.params.id);
+      const result = await groupDeleter.softDeleteGroupAsAdmin(group_id);
+      res.json(result); 
+    } catch (error) {
+      errorHandler.handleControllerError(res, error, 'PATCH /groups/admin/delete/:id', 'No se pudo eliminar el grupo');
+    }
+  });
 });
 
 module.exports = router;
