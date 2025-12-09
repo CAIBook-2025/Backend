@@ -455,8 +455,9 @@ router.patch('/cancel/admin', async (req, res) => {
 });
 
 // PATCH /schedules/refresh
-router.patch('/refresh', async (ctx) => {
+router.patch('/refresh', async (req, res) => {
   console.log('>>> [refresh] Inicio handler SIMPLE');
+
   try {
     const updated = await prisma.$executeRaw`
       UPDATE "public"."SRScheduling"
@@ -466,17 +467,19 @@ router.patch('/refresh', async (ctx) => {
 
     console.log('>>> [refresh] Filas actualizadas =', updated);
 
-    ctx.status = 200;
-    ctx.body = {
+    return res.status(200).json({
       ok: true,
       message: 'Reservas movidas 7 días hacia adelante',
       updatedCount: Number(updated),
-    };
-    console.log('>>> [refresh] Respuesta enviada OK (SIMPLE)');
+    });
+
   } catch (err) {
     console.error('>>> [refresh] ERROR SIMPLE:', err);
-    ctx.status = 500;
-    ctx.body = { error: 'Error al refrescar las salas de estudio' };
+
+    return res.status(500).json({
+      ok: false,
+      error: 'Error al refrescar las salas de estudio',
+    });
   }
 });
 
