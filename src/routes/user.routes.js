@@ -6,6 +6,7 @@ const userUpdater = require('../services//userServices/userUpdater');
 const userDeleter = require('../services//userServices/userDeleter');
 const userChecker = require('../services//userServices/userChecker');
 const errorHandler = require('../utils/errorHandler');
+const e = require('express');
 
 const router = Router();
 
@@ -151,5 +152,32 @@ router.post('/send-change-password-email', checkJwt, async (req, res) => {
     errorHandler.handleControllerError(res, error, 'POST /users/send-change-password-email', 'No se pudo cambiar la contraseña del usuario');
   }
 });
+
+// POST /users/super-admin/create-admin
+router.post('/super-admin/create-admin', checkJwt, async (req, res) => {
+  try {
+    const isSuperAdmin = await userChecker.userIsSuperAdmin(req.auth.sub);
+    if (!isSuperAdmin) {
+      return res.status(403).json({ message: 'Acceso denegado. Solo super admin pueden crear administradores.' });
+    }
+
+    const adminUserData = 
+    {
+      email: req.body.email,
+      first_name: req.body.first_name,
+      last_name: req.body.last_name,
+      phone: req.body.phone,
+      career: req.body.career,
+      student_number: req.body.student_number,
+      auth0_id: 'temporal_placeholder',
+    }
+
+    const adminUser = await userCreator.createAdminUser(adminUserData);
+    res.status(201).json(adminUser);
+  } catch (error) {
+    errorHandler.handleControllerError(res, error, 'POST /users/super-admin/create-admin', 'No se pudo crear el usuario administrador por super admin');
+  }
+});
+
 
 module.exports = router;
