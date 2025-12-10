@@ -24,15 +24,12 @@ const router = Router();
 
 router.get('/my-groups', checkJwt, async (req, res) => {
   try {
-    console.log('Ruta /my-groups alcanzada');
-    console.log('Auth sub:', req.auth?.sub);
 
     // Encontrar el usuario por auth0_id
     const requestingUser = await prisma.user.findUnique({ 
       where: { auth0_id: req.auth.sub, is_deleted: false } 
     });
 
-    console.log('Usuario encontrado:', requestingUser);
 
     // Verificar que el usuario es representante
     if (!requestingUser) {
@@ -64,7 +61,6 @@ router.get('/my-groups', checkJwt, async (req, res) => {
       }
     });
 
-    console.log('Grupos encontrados:', groups);
 
     res.json({
       total_groups: groups.length,
@@ -291,8 +287,6 @@ router.post('/', checkJwt, async (req, res) => {
     if (!representative) {
       return res.status(404).json({ error: 'Representante no encontrado' });
     }
-
-    console.log(representative);
 
     // if (!representative.is_representative) {
     //   return res.status(400).json({ 
