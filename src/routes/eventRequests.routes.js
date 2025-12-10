@@ -347,6 +347,45 @@ router.post('/', checkJwt, async (req, res) => {
   }
 });
 
+router.patch('/cancel/:id', checkJwt, async (req, res) => {
+  try {
+    console.log('entrando al patch');
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    
+    const eventRequest = await prisma.eventRequest.findUnique({
+      where: { id, status: { in: ['PENDING', 'CONFIRMED'] }},
+      include: {
+        group: true,
+        publicSpace: true
+      }
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { auth0_id: req.auth.sub, is_deleted: false }
+    });
+
+    const isRepresentative = user.id === eventRequest.group.repre_id;
+    const isAdmin = user.role === 'ADMIN';
+
+    if (!isRepresentative && !isAdmin) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    await prisma.eventRequest.update({
+      where: { id },
+      data: { status: 'CANCELLED' }
+    });
+    res.status(204).end();
+  }
+  catch (error) {
+    console.log('ERROR PATCH /event-requests/:id/cancel:', error);
+    res.status(500).json({ error: 'No se pudo cancelar la solicitud de evento' });
+  }
+});
+
 
 
 // DELETE /event-requests/:id - Eliminar solicitud
