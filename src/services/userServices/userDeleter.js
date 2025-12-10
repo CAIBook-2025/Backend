@@ -107,12 +107,6 @@ class UserDeleter {
     await prisma.feedback.deleteMany({
       where: { id: { in: feedbackIdsFromEventsOfUserGroups }, },
     });
-    
-    console.log(`Soft deleted group resources for user ID ${user_id}`);
-    console.log(`Group Requests IDs: ${groupRequestIdsFromUser || 'None'}`);
-    console.log(`Groups IDs: ${groupIdsFromUser || 'None'}`);
-    console.log(`Event Requests IDs: ${eventRequestIdsFromUserGroups || 'None'}`);
-    console.log(`Feedback IDs: ${feedbackIdsFromEventsOfUserGroups || 'None'}`);
   }
 
   async freeStudyRoomSchedulesOfUserInDB(user_id) {

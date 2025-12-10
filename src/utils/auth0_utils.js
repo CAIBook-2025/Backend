@@ -13,7 +13,6 @@ async function getMachineToMachineToken() {
       })
     });
     const data = await response.json();
-    console.log('Machine to machine token obtenido:', data);
     return data.access_token;
   } catch (error) {
     console.error('Error getting machine to machine token:', error);
