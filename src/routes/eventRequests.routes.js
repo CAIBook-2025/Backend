@@ -349,7 +349,6 @@ router.post('/', checkJwt, async (req, res) => {
 
 router.patch('/cancel/:id', checkJwt, async (req, res) => {
   try {
-    console.log('entrando al patch');
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: 'ID inválido' });

@@ -2,14 +2,6 @@ const { Router } = require('express');
 const { prisma } = require('../lib/prisma');
 
 const router = Router();
-// const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
-// function addDays(date, days) {
-//   const d = new Date(date);
-//   console.log("previos date", d)
-//   d.setDate(d.getDate() + days);
-//   console.log("new date", d)
-//   return d;
-// }
 
 // GET /schedules?srId=&date=YYYY-MM-DD&page=&take=
 router.get('/', async (req, res) => {
@@ -46,8 +38,6 @@ router.get('/', async (req, res) => {
       prisma.sRScheduling.count({ where })
     ]);
 
-    console.log(total);
-
     res.json({ page, take, total, items });
   } catch (error) {
     console.log('ERROR GET /schedules:', error);
@@ -78,21 +68,6 @@ router.get('/my/:userId', async (req, res) => {
     const dateFilter = {};
     if (from) dateFilter.gte = new Date(`${from}T00:00:00.000Z`);
     if (to) dateFilter.lte = new Date(`${to}T23:59:59.999Z`);
-
-    // Si no me piden incluir pasadas y no hay 'from', parto desde hoy
-    // const includePastBool = String(includePast).toLowerCase() === 'true';
-    
-    // if (!includePastBool && !from) {
-    //   const today = new Date();
-    //   console.log("TODAY", today);
-    //   today.setHours(0, 0, 0, 0);
-    //   console.log("TODAY 2", today)
-    //   dateFilter.gte = dateFilter.gte ?? today;
-    // }
-    // if (Object.keys(dateFilter).length) {
-    //   console.log("ENTRA AQUÍ");
-    //   where.day = dateFilter;
-    // }
 
     // Paginación
     const take = Math.min(Number(pageSize) || 20, 100);
@@ -182,14 +157,9 @@ router.patch('/book', async (req, res) => {
       return res.status(400).json({ error: 'userId es requerido' });
     }
 
-    console.log(id);
-    console.log(userId);
-
-    const schedule = await prisma.sRScheduling.findMany({
+    await prisma.sRScheduling.findMany({
       where: { id }
     });
-
-    console.log(schedule);
 
     const result = await prisma.sRScheduling.updateMany({
       where: {
@@ -203,8 +173,6 @@ router.patch('/book', async (req, res) => {
         available: 'UNAVAILABLE',
       },
     });
-
-    console.log(result);
 
     if (result.count !== 1) {
       return res.status(409).json({
@@ -242,8 +210,6 @@ router.patch('/cancel', async (req, res) => {
       },
     });
 
-    console.log('RESULTADO: ', result);
-
     if (result.count !== 1) {
       return res.status(409).json({
         error: 'El horario no está disponible o no existe',
@@ -268,15 +234,13 @@ router.patch('/checkin', async (req, res) => {
       return res.status(400).json({ error: 'ID inválido' });
     }
 
-    const where = {
-      id: scheduleId,
-      available: 'UNAVAILABLE',
-      is_finished: false,
-      status: 'PENDING',
-      user_id: userId
-    };
-
-    console.log(where);
+    // const where = {
+    //   id: scheduleId,
+    //   available: 'UNAVAILABLE',
+    //   is_finished: false,
+    //   status: 'PENDING',
+    //   user_id: userId
+    // };
 
     await prisma.sRScheduling.update({
       where: {
@@ -456,7 +420,6 @@ router.patch('/cancel/admin', async (req, res) => {
 
 // PATCH /schedules/refresh
 router.patch('/refresh', async (req, res) => {
-  console.log('>>> [refresh] Inicio handler SIMPLE');
 
   try {
     const updated = await prisma.$executeRaw`
@@ -464,8 +427,6 @@ router.patch('/refresh', async (req, res) => {
       SET "day" = "day" + INTERVAL '7 days'
       WHERE 1=1
     `;
-
-    console.log('>>> [refresh] Filas actualizadas =', updated);
 
     return res.status(200).json({
       ok: true,
