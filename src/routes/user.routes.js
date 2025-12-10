@@ -6,7 +6,6 @@ const userUpdater = require('../services//userServices/userUpdater');
 const userDeleter = require('../services//userServices/userDeleter');
 const userChecker = require('../services//userServices/userChecker');
 const errorHandler = require('../utils/errorHandler');
-const e = require('express');
 
 const router = Router();
 
@@ -170,7 +169,7 @@ router.post('/super-admin/create-admin', checkJwt, async (req, res) => {
       career: req.body.career,
       student_number: req.body.student_number,
       auth0_id: 'temporal_placeholder',
-    }
+    };
 
     const adminUser = await userCreator.createAdminUser(adminUserData);
     res.status(201).json(adminUser);
