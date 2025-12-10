@@ -46,7 +46,7 @@ class UserCreator {
     const newAdminUserEmail = createAdminUserRequestData.email.toLowerCase();
     const newAdminUserPassword = this.createAdminUserPassword();
     const newAdminUserAuth0 = await this.createAdminUserInAuth0(newAdminUserEmail, newAdminUserPassword, machineToMachineToken);
-    const adminUser = await this.createAdminUserInOwnDB(newAdminUserAuth0, newAdminUserEmail);
+    const adminUser = await this.createAdminUserInOwnDB(newAdminUserAuth0, createAdminUserRequestData);
     return {
       status: 'success',
       adminUser: adminUser,
@@ -83,18 +83,18 @@ class UserCreator {
     }
   }
 
-  async createAdminUserInOwnDB(newAdminUserAuth0, newAdminUserEmail) {
+  async createAdminUserInOwnDB(newAdminUserAuth0, newAdminUserRequestData) {
     try {
       const adminUser = await prisma.user.create({
         data: {
           auth0_id: newAdminUserAuth0.user_id,
-          email: newAdminUserEmail,
-          first_name: 'actualizar',
-          last_name: 'actualizar',
+          email: newAdminUserRequestData.email.toLowerCase(),
+          first_name: newAdminUserRequestData.first_name,
+          last_name: newAdminUserRequestData.last_name,
           role: 'ADMIN',
-          career: 'admin cai',
-          phone: '1',
-          student_number: '1',
+          career: newAdminUserRequestData.career || 'admin cai',
+          phone: newAdminUserRequestData.phone || '1',
+          student_number: newAdminUserRequestData.student_number || 'ADMIN-' + Date.now(),
         }
       });
       return adminUser;
@@ -103,7 +103,6 @@ class UserCreator {
       throw error;
     }
   }
-
 }
 
 module.exports = new UserCreator();
